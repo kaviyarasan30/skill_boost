@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "837295446432",
+    "project_id": "skillboost-c846b",
+    "storage_bucket": "skillboost-c846b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:837295446432:android:42e0529366bc8fb3b0ecc5",
+        "android_client_info": {
+          "package_name": "com.softskillboost.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsrRqDbrpvTMg6UmxbjQmIC67zqBtNmCE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:837295446432:android:d8fa068c012aa253b0ecc5",
+        "android_client_info": {
+          "package_name": "com.softskillboost.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsrRqDbrpvTMg6UmxbjQmIC67zqBtNmCE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
