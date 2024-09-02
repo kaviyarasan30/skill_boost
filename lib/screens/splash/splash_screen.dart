@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:skill_boost/providers/auth_provider.dart';
+import 'package:skill_boost/screens/auth/login_screen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -25,23 +28,34 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Interval(0.0, 0.65, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.65, curve: Curves.easeIn),
       ),
     );
 
     _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Interval(0.0, 0.65, curve: Curves.easeOutBack),
+        curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
       ),
     );
 
     _controller.forward();
 
+    _initializeAppAndNavigate();
+  }
+
+  Future<void> _initializeAppAndNavigate() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.initializeApp();
+
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainScreen()),
+          MaterialPageRoute(
+            builder: (context) => authProvider.currentUser != null
+                ? MainScreen()
+                : const LoginScreen(),
+          ),
         );
       }
     });
@@ -56,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Set background color to match your brand
+      backgroundColor: Colors.white,
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -67,10 +81,8 @@ class _SplashScreenState extends State<SplashScreen>
                 scale: _scaleAnimation.value,
                 child: Image.asset(
                   'assets/logo.png',
-                  width: MediaQuery.of(context).size.width *
-                      0.6, // 60% of screen width
-                  height: MediaQuery.of(context).size.width *
-                      0.6, // Maintain aspect ratio
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  height: MediaQuery.of(context).size.width * 0.6,
                 ),
               ),
             );

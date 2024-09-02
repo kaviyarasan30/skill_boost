@@ -7,9 +7,8 @@ class SkillboostApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Set the status bar color to match your splash screen background
     SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
+      const SystemUiOverlayStyle(
         statusBarColor: Colors.white,
         statusBarIconBrightness: Brightness.dark,
       ),

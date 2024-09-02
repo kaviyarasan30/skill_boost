@@ -3,19 +3,25 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'package:skill_boost/helpers/locator.dart';
-import 'skillboost.dart';
+import 'package:skill_boost/providers/auth_provider.dart';
+import 'package:skill_boost/skillboost.dart';
 import 'firebase_options.dart';
 
-void main() {
-  runApp(const SkillboostApp());
-  _initializeApp();
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _initializeApp();
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => locator<AuthProvider>(),
+      child: const SkillboostApp(),
+    ),
+  );
 }
 
 Future<void> _initializeApp() async {
-  WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-
   await _initializeFirebase();
   setupLocator();
 
