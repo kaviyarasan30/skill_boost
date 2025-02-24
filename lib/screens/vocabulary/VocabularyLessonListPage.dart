@@ -160,11 +160,11 @@ class LessonCard extends StatelessWidget {
                 height: 32,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //       builder: (context) => VocabularyQuestionPage()),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => VocabularyQuestionPage()),
+                    );
                   },
                   style: globalButtonStyle.copyWith(
                     padding: MaterialStateProperty.all(EdgeInsets.zero),

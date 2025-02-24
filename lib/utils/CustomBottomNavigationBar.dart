@@ -13,7 +13,6 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
 
   final List<Widget> _children = [
     MainScreen(),
-    UnderDevelopmentPage(),
     Center(child: Text('Pronounciation')),
     Center(child: Text('Test')),
     Center(child: Text('Report')),

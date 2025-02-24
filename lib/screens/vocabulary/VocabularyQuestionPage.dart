@@ -5,40 +5,36 @@ class VocabularyQuestionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Vocabulary'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Vocabulary',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.person_outline),
+            icon: Icon(Icons.person_outline, color: Colors.black),
             onPressed: () {
-              // Handle profile action
+              Navigator.of(context).pop();
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
-          ),
           ListTile(
             leading: Icon(Icons.arrow_back),
-            title: Text('Basic Nouns'),
+            title: Text('Basic Nouns',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
           Expanded(
             child: ListView(
+              padding: EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _buildQuestionCard('New Word', 'Choose the best definition'),
-                _buildAnswerTile('Differentiate'),
+                _buildQuestionCard('Differentiate'),
+                SizedBox(height: 16),
                 _buildAnswerTile('Identify differences between'),
                 _buildAnswerTile('create'),
                 _buildAnswerTile('vary randomly'),
@@ -53,32 +49,48 @@ class VocabularyQuestionPage extends StatelessWidget {
     );
   }
 
-  Widget _buildQuestionCard(String title, String subtitle) {
-    return Card(
-      margin: EdgeInsets.all(8),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(subtitle),
-          ],
-        ),
+  Widget _buildQuestionCard(String question) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'New Word',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+          SizedBox(height: 8),
+          Text(
+            question,
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Choose the best definition',
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildAnswerTile(String answer) {
-    return ListTile(
-      title: Text(answer),
-      onTap: () {
-        // Handle answer selection
-      },
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        title: Text(answer),
+        onTap: () {
+          // Handle answer selection
+        },
+      ),
     );
   }
 }
