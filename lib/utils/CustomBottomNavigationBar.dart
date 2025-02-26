@@ -1,27 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
-import 'package:skill_boost/utils/UnderDevelopmentPage.dart';
+import 'package:skill_boost/screens/speech/SpeechScreen.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
+  final int initialIndex;
+
+  const CustomBottomNavigationBar({Key? key, this.initialIndex = 0})
+      : super(key: key);
+
   @override
   _CustomBottomNavigationBarState createState() =>
       _CustomBottomNavigationBarState();
 }
 
 class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
-  final List<Widget> _children = [
-    MainScreen(),
-    Center(child: Text('Pronounciation')),
-    Center(child: Text('Test')),
-    Center(child: Text('Report')),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   void onTabTapped(int index) {
+    if (_currentIndex == index) return; // Don't navigate if already on the tab
+
     setState(() {
       _currentIndex = index;
     });
+
+    // Navigate to the selected screen
+    Widget destination;
+
+    switch (index) {
+      case 0:
+        destination = MainScreen();
+        break;
+      case 1:
+        destination = SpeechScreen();
+        break;
+      case 2:
+        destination = Center(child: Text('Pronunciation'));
+        break;
+      case 3:
+        destination = Center(child: Text('Test'));
+        break;
+      case 4:
+        destination = Center(child: Text('Report'));
+        break;
+      default:
+        destination = MainScreen();
+    }
+
+    // Replace the current screen with the selected one
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => destination),
+    );
   }
 
   @override
@@ -30,46 +64,44 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
       backgroundColor: Colors.white,
       onTap: onTabTapped,
       currentIndex: _currentIndex,
-      type: BottomNavigationBarType
-          .fixed, // This keeps the labels even when not selected
-      selectedItemColor: Colors.black, // Color when an item is selected
-      unselectedItemColor:
-          Colors.black.withOpacity(0.6), // Color when not selected
-      showSelectedLabels: true, // Hide labels for selected items
-      showUnselectedLabels: false, // Hide labels for unselected items
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: Colors.black,
+      unselectedItemColor: Colors.black.withOpacity(0.6),
+      showSelectedLabels: true,
+      showUnselectedLabels: false,
       items: [
         BottomNavigationBarItem(
           icon: Icon(
             Icons.book_sharp,
-            size: 24, // Adjust size if needed
+            size: 24,
           ),
           label: 'Vocabulary',
         ),
         BottomNavigationBarItem(
           icon: Icon(
             Icons.mic,
-            size: 24, // Adjust size if needed
+            size: 24,
           ),
           label: 'Speech',
         ),
         BottomNavigationBarItem(
           icon: Icon(
             Icons.graphic_eq,
-            size: 24, // Adjust size if needed
+            size: 24,
           ),
-          label: 'Pronounciation',
+          label: 'Pronunciation',
         ),
         BottomNavigationBarItem(
           icon: Icon(
             Icons.assignment,
-            size: 24, // Adjust size if needed
+            size: 24,
           ),
           label: 'Test',
         ),
         BottomNavigationBarItem(
           icon: Icon(
             Icons.bar_chart,
-            size: 24, // Adjust size if needed
+            size: 24,
           ),
           label: 'Report',
         ),
