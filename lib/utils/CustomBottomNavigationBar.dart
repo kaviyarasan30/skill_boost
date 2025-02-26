@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skill_boost/screens/Pronunciation/PronunciationScreen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/screens/speech/SpeechScreen.dart';
 
@@ -40,7 +41,7 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
         destination = SpeechScreen();
         break;
       case 2:
-        destination = Center(child: Text('Pronunciation'));
+        destination = PronunciationScreen();
         break;
       case 3:
         destination = Center(child: Text('Test'));
