@@ -1,12 +1,33 @@
+// vocabulary_lesson_list_page.dart
 import 'package:flutter/material.dart';
+import 'package:skill_boost/models/lesson_model.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/screens/vocabulary/VocabularyQuestionPage.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
 
-class VocabularyLessonListPage extends StatelessWidget {
+class VocabularyLessonListPage extends StatefulWidget {
+  final Lesson lesson;
+
+  const VocabularyLessonListPage({
+    Key? key,
+    required this.lesson,
+  }) : super(key: key);
+
+  @override
+  _VocabularyLessonListPageState createState() => _VocabularyLessonListPageState();
+}
+
+class _VocabularyLessonListPageState extends State<VocabularyLessonListPage> {
+  // Track completed questions
+  Map<String, bool> completedQuestions = {};
+
   @override
   Widget build(BuildContext context) {
+    // Calculate progress
+    int completedCount = completedQuestions.values.where((v) => v).length;
+    int totalQuestions = widget.lesson.questions.length;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -15,7 +36,10 @@ class VocabularyLessonListPage extends StatelessWidget {
         title: Text(
           'Vocabulary',
           style: TextStyle(
-              color: Colors.black, fontSize: 24, fontWeight: FontWeight.bold),
+            color: Colors.black,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           Padding(
@@ -32,7 +56,7 @@ class VocabularyLessonListPage extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search',
+                hintText: 'Search questions',
                 prefixIcon: Icon(Icons.search),
                 filled: true,
                 fillColor: Colors.grey.shade200,
@@ -45,46 +69,91 @@ class VocabularyLessonListPage extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => MainScreen()),
-                  );
-                },
-                icon: Icon(
-                  Icons.arrow_circle_left_outlined,
-                  color: Colors.black,
-                  size: 25,
+            child: Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => MainScreen()),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.arrow_circle_left_outlined,
+                    color: Colors.black,
+                    size: 25,
+                  ),
+                  label: Text(
+                    widget.lesson.lessonName,
+                    style: TextStyle(color: Colors.black, fontSize: 25),
+                  ),
                 ),
-                label: Text('Basic Words',
-                    style: TextStyle(color: Colors.black, fontSize: 25)),
-              ),
+              ],
             ),
           ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
               children: [
-                LessonCard(
-                  level: 'Basic Level 1',
-                  completedWords: 10,
-                  totalWords: 10,
-                  buttonText: 'Reply',
-                  isCompleted: true,
+                Icon(Icons.person, size: 16),
+                SizedBox(width: 4),
+                Text(
+                  'Created by ${widget.lesson.uploader.name}',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
                 ),
-                LessonCard(
-                  level: 'Basic Level 2',
-                  completedWords: 5,
-                  totalWords: 20,
-                  buttonText: 'Continue',
+              ],
+            ),
+          ),
+          SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              itemCount: widget.lesson.questions.length,
+              itemBuilder: (context, index) {
+                final question = widget.lesson.questions[index];
+                final isCompleted = completedQuestions[question.id] ?? false;
+                
+                return QuestionCard(
+                  questionNumber: index + 1,
+                  question: question,
+                  isCompleted: isCompleted,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VocabularyQuestionPage(
+                          question: question,
+                          onComplete: () {
+                            setState(() {
+                              completedQuestions[question.id] = true;
+                            });
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: totalQuestions > 0 ? completedCount / totalQuestions : 0,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                 ),
-                LessonCard(
-                  level: 'Basic Level 2',
-                  completedWords: 0,
-                  totalWords: 30,
-                  buttonText: 'Start',
+                SizedBox(height: 8),
+                Text(
+                  '$completedCount of $totalQuestions questions completed',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -95,20 +164,18 @@ class VocabularyLessonListPage extends StatelessWidget {
   }
 }
 
-class LessonCard extends StatelessWidget {
-  final String level;
-  final int completedWords;
-  final int totalWords;
-  final String buttonText;
+class QuestionCard extends StatelessWidget {
+  final int questionNumber;
+  final Question question;
   final bool isCompleted;
+  final VoidCallback onPressed;
 
-  const LessonCard({
+  const QuestionCard({
     Key? key,
-    required this.level,
-    required this.completedWords,
-    required this.totalWords,
-    required this.buttonText,
-    this.isCompleted = false,
+    required this.questionNumber,
+    required this.question,
+    required this.isCompleted,
+    required this.onPressed,
   }) : super(key: key);
 
   @override
@@ -135,7 +202,7 @@ class LessonCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  level,
+                  'Question ${questionNumber}',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 18,
@@ -143,7 +210,7 @@ class LessonCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$completedWords of $totalWords words completed',
+                  'Type: ${question.type}',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 14,
@@ -159,24 +226,17 @@ class LessonCard extends StatelessWidget {
                 width: 80,
                 height: 32,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => VocabularyQuestionPage()),
-                    );
-                  },
+                  onPressed: onPressed,
                   style: globalButtonStyle.copyWith(
                     padding: MaterialStateProperty.all(EdgeInsets.zero),
                     minimumSize: MaterialStateProperty.all(const Size(80, 32)),
                     maximumSize: MaterialStateProperty.all(const Size(80, 32)),
                     textStyle: MaterialStateProperty.all(
-                      const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600),
+                      const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     backgroundColor: MaterialStateProperty.all(Colors.black),
                   ),
-                  child: Text(buttonText),
+                  child: Text(isCompleted ? 'Review' : 'Start'),
                 ),
               ),
               if (isCompleted)
