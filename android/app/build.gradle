@@ -5,42 +5,53 @@ plugins {
     id "com.google.gms.google-services"
 }
 
-android {
-    namespace = "com.softskillboost.app"
-    compileSdk = 34
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
 
-    ndkVersion = "25.0.8775105"
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+android {
+    namespace "com.softskillboost.app"
+    compileSdkVersion 34
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = '17'
     }
 
     defaultConfig {
-        applicationId = "com.softskillboost.app"
-        minSdk = 23 // Updated from 21 to 23
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        applicationId "com.softskillboost.app"
+        minSdkVersion 23
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0"
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug
+            signingConfig signingConfigs.debug
         }
     }
 }
 
 flutter {
-    source = "../.."
+    source '../..'
 }
 
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:33.2.0')
     implementation 'com.google.firebase:firebase-analytics'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.20" // Updated to match Kotlin version in project-level build.gradle
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.20"
 }

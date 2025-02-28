@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:skill_boost/models/pronunciation_lesson_model.dart';
 import 'package:skill_boost/utils/button_style.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class PronunciationItemPage extends StatefulWidget {
   final PronunciationItem pronunciationItem;
@@ -25,6 +27,116 @@ class _PronunciationItemPageState extends State<PronunciationItemPage> {
   bool _hasRecorded = false;
   bool _isRecording = false;
   String _recordingStatus = '';
+  late AudioPlayer _audioPlayer;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAudioPlayer();
+  }
+
+  Future<void> _initAudioPlayer() async {
+    try {
+      _audioPlayer = AudioPlayer();
+
+      // Configure audio player settings
+      await _audioPlayer.setReleaseMode(ReleaseMode.stop);
+      await _audioPlayer.setPlayerMode(PlayerMode.mediaPlayer);
+
+      // Create the source
+      final source = UrlSource(widget.pronunciationItem.audioFile);
+
+      try {
+        await _audioPlayer.setSource(source).timeout(
+          Duration(seconds: 10),
+          onTimeout: () {
+            throw TimeoutException('Failed to load audio file');
+          },
+        );
+
+        _isInitialized = true;
+      } catch (e) {
+        print('Error setting source: $e');
+        throw 'Failed to set audio source: ${e.toString()}';
+      }
+
+      _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = state == PlayerState.playing;
+            if (state == PlayerState.completed) {
+              _recordingStatus = '';
+            }
+          });
+        }
+      });
+
+      _audioPlayer.onPlayerComplete.listen((_) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = false;
+            _recordingStatus = '';
+          });
+        }
+      });
+    } catch (e) {
+      print('Error initializing audio player: $e');
+      if (mounted) {
+        setState(() {
+          _isInitialized = false;
+          _recordingStatus =
+              'Error loading audio. Please check your internet connection.';
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleAudio() async {
+    if (!_isInitialized) {
+      // Try to reinitialize if not initialized
+      await _initAudioPlayer();
+      if (!_isInitialized) {
+        setState(() {
+          _recordingStatus = 'Cannot play audio. Please try again later.';
+        });
+        return;
+      }
+    }
+
+    try {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+        setState(() {
+          _recordingStatus = '';
+        });
+      } else {
+        setState(() {
+          _recordingStatus = 'Playing audio...';
+        });
+
+        // Stop any existing playback first
+        await _audioPlayer.stop();
+
+        // Create new source and set it
+        final source = UrlSource(widget.pronunciationItem.audioFile);
+        await _audioPlayer.setSource(source);
+
+        // Play the audio
+        await _audioPlayer.resume();
+      }
+    } catch (e) {
+      print('Error playing audio: $e');
+      setState(() {
+        _isPlaying = false;
+        _recordingStatus = 'Error playing audio. Please try again.';
+      });
+
+      // Try to reinitialize the player
+      _isInitialized = false;
+      await _initAudioPlayer();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -371,31 +483,6 @@ class _PronunciationItemPageState extends State<PronunciationItemPage> {
     }
   }
 
-  void _toggleAudio() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-
-      // In a real app, you would implement actual audio playback functionality here
-      if (_isPlaying) {
-        // Start audio playback
-        _recordingStatus = 'Playing audio...';
-
-        // Simulate audio playback ending after 2 seconds
-        Future.delayed(Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              _isPlaying = false;
-              _recordingStatus = '';
-            });
-          }
-        });
-      } else {
-        // Stop audio playback
-        _recordingStatus = '';
-      }
-    });
-  }
-
   void _toggleRecording() {
     setState(() {
       if (_isRecording) {
@@ -432,8 +519,7 @@ class _PronunciationItemPageState extends State<PronunciationItemPage> {
 
   @override
   void dispose() {
-    // Clean up resources when widget is disposed
-    // In a real app, you would release audio players and recorders here
+    _audioPlayer.dispose();
     super.dispose();
   }
 }
