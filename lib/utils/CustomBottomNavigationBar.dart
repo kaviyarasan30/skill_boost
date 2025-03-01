@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:skill_boost/screens/Pronunciation/PronunciationScreen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/screens/speech/SpeechScreen.dart';
+import 'package:skill_boost/screens/test/TestScreen.dart';
+import 'package:skill_boost/screens/report/ReportScreen.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   final int initialIndex;
@@ -24,15 +27,13 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
   }
 
   void onTabTapped(int index) {
-    if (_currentIndex == index) return; // Don't navigate if already on the tab
+    if (_currentIndex == index) return;
 
     setState(() {
       _currentIndex = index;
     });
 
-    // Navigate to the selected screen
     Widget destination;
-
     switch (index) {
       case 0:
         destination = MainScreen();
@@ -44,69 +45,69 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
         destination = PronunciationScreen();
         break;
       case 3:
-        destination = Center(child: Text('Test'));
+        destination = TestScreen();
         break;
       case 4:
-        destination = Center(child: Text('Report'));
+        destination = ReportScreen();
         break;
       default:
         destination = MainScreen();
     }
 
-    // Replace the current screen with the selected one
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => destination),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => destination,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+          var tween =
+              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+          return SlideTransition(position: offsetAnimation, child: child);
+        },
+        transitionDuration: Duration(milliseconds: 500),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      backgroundColor: Colors.white,
-      onTap: onTabTapped,
-      currentIndex: _currentIndex,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.black,
-      unselectedItemColor: Colors.black.withOpacity(0.6),
-      showSelectedLabels: true,
-      showUnselectedLabels: false,
-      items: [
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.book_sharp,
-            size: 24,
+    return Container(
+      color: Colors.transparent,
+      child: CurvedNavigationBar(
+        index: _currentIndex,
+        height: 60.0,
+        items: <Widget>[
+          Tooltip(
+            message: 'Vocabulary',
+            child: Icon(Icons.book_sharp, size: 30, color: Colors.white),
           ),
-          label: 'Vocabulary',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.mic,
-            size: 24,
+          Tooltip(
+            message: 'Speech',
+            child: Icon(Icons.mic, size: 30, color: Colors.white),
           ),
-          label: 'Speech',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.graphic_eq,
-            size: 24,
+          Tooltip(
+            message: 'Pronunciation',
+            child: Icon(Icons.graphic_eq, size: 30, color: Colors.white),
           ),
-          label: 'Pronunciation',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.assignment,
-            size: 24,
+          Tooltip(
+            message: 'Test',
+            child: Icon(Icons.assignment, size: 30, color: Colors.white),
           ),
-          label: 'Test',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.bar_chart,
-            size: 24,
+          Tooltip(
+            message: 'Report',
+            child: Icon(Icons.bar_chart, size: 30, color: Colors.white),
           ),
-          label: 'Report',
-        ),
-      ],
+        ],
+        color: Colors.blue.shade600,
+        buttonBackgroundColor: Colors.blue.shade700,
+        backgroundColor: Colors.transparent,
+        animationCurve: Curves.easeInOut,
+        animationDuration: Duration(milliseconds: 600),
+        onTap: onTabTapped,
+        letIndexChange: (index) => true,
+      ),
     );
   }
 }

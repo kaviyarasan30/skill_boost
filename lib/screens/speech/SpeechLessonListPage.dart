@@ -124,7 +124,7 @@ class SpeechLessonListPage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(),
+      bottomNavigationBar: CustomBottomNavigationBar(initialIndex: 1),
     );
   }
 }

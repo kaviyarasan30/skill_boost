@@ -7,7 +7,6 @@ import 'package:skill_boost/screens/speech/SpeechLessonListPage.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
 
-
 class SpeechScreen extends StatelessWidget {
   final SpeechService _speechService = SpeechService();
 
@@ -68,7 +67,7 @@ class SpeechScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(),
+      bottomNavigationBar: CustomBottomNavigationBar(initialIndex: 1),
     );
   }
 }

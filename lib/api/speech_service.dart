@@ -4,7 +4,7 @@ import 'package:skill_boost/models/speech_lesson_model.dart';
 
 class SpeechService {
   static const String baseUrl =
-      'https://43d4-2409-40f4-3015-31ca-555-efb6-1326-a105.ngrok-free.app/api';
+      'https://31cb-2409-40f4-3004-18f4-bdd4-6b01-e5cd-b2a8.ngrok-free.app/api';
 
   Future<List<SpeechLesson>> getSpeechLessons() async {
     try {

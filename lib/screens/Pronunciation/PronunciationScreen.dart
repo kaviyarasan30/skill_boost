@@ -66,7 +66,7 @@ class PronunciationScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(),
+      bottomNavigationBar: CustomBottomNavigationBar(initialIndex: 2),
     );
   }
 }

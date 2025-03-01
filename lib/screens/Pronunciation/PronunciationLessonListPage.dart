@@ -6,7 +6,8 @@ import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 class PronunciationLessonListPage extends StatelessWidget {
   final PronunciationLesson lesson;
 
-  const PronunciationLessonListPage({Key? key, required this.lesson}) : super(key: key);
+  const PronunciationLessonListPage({Key? key, required this.lesson})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +64,8 @@ class PronunciationLessonListPage extends StatelessWidget {
                   SizedBox(height: 5),
                   Row(
                     children: [
-                      Icon(Icons.signal_cellular_alt, size: 18, color: Colors.grey),
+                      Icon(Icons.signal_cellular_alt,
+                          size: 18, color: Colors.grey),
                       SizedBox(width: 8),
                       Text(
                         'Difficulty: ${lesson.level}',
@@ -74,7 +76,8 @@ class PronunciationLessonListPage extends StatelessWidget {
                   SizedBox(height: 5),
                   Row(
                     children: [
-                      Icon(Icons.format_list_numbered, size: 18, color: Colors.grey),
+                      Icon(Icons.format_list_numbered,
+                          size: 18, color: Colors.grey),
                       SizedBox(width: 8),
                       Text(
                         '${lesson.pronunciations.length} words',
@@ -127,7 +130,7 @@ class PronunciationLessonListPage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(),
+      bottomNavigationBar: CustomBottomNavigationBar(initialIndex: 2),
     );
   }
 }
