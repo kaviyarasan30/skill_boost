@@ -4,8 +4,11 @@ import 'package:skill_boost/api/lesson_service.dart';
 import 'package:skill_boost/models/lesson_model.dart';
 import 'package:skill_boost/providers/auth_provider.dart';
 import 'package:skill_boost/screens/vocabulary/VocabularyLessonListPage.dart';
+import 'package:skill_boost/screens/profile/profile_screen.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
+import 'package:skill_boost/utils/global_app_bar.dart';
+import 'package:lottie/lottie.dart';
 
 class MainScreen extends StatelessWidget {
   final LessonService _lessonService = LessonService();
@@ -14,58 +17,97 @@ class MainScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Text(
-          'Vocabulary',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.account_circle, color: Colors.black, size: 30),
-          ),
-        ],
-        automaticallyImplyLeading: false,
+      appBar: GlobalAppBar(
+        title: 'Vocabulary',
+        achievementCount: 3,
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SearchBar(),
-            SizedBox(height: 20),
-            // DifficultyFilter(),
-            SizedBox(height: 20),
-            Expanded(
-              child: FutureBuilder<List<Lesson>>(
-                future: _lessonService.getLessons(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: Text('No lessons available'));
-                  }
-
-                  return ListView.builder(
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final lesson = snapshot.data![index];
-                      return VocabularyCard(lesson: lesson);
-                    },
-                  );
-                },
+      body: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: 0.7,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Daily Goal: 70%',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '7/10 Lessons',
+                      style: TextStyle(
+                        color: Colors.purple,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search lessons',
+                prefixIcon: Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
               ),
             ),
-          ],
-        ),
+          ),
+          SizedBox(height: 20),
+          Expanded(
+            child: FutureBuilder<List<Lesson>>(
+              future: _lessonService.getLessons(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: Lottie.network(
+                      'https://assets1.lottiefiles.com/packages/lf20_qm8eqzse.json',
+                      width: 200,
+                      height: 200,
+                    ),
+                  );
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text('No lessons available'));
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final lesson = snapshot.data![index];
+                    return VocabularyCard(
+                      lesson: lesson,
+                      isLocked: index > 2,
+                      progress: index == 0 ? 1.0 : (index == 1 ? 0.6 : 0.0),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: CustomBottomNavigationBar(),
     );
@@ -74,14 +116,20 @@ class MainScreen extends StatelessWidget {
 
 class VocabularyCard extends StatelessWidget {
   final Lesson lesson;
+  final bool isLocked;
+  final double progress;
 
-  const VocabularyCard({Key? key, required this.lesson}) : super(key: key);
+  const VocabularyCard({
+    Key? key,
+    required this.lesson,
+    this.isLocked = false,
+    this.progress = 0.0,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -94,69 +142,155 @@ class VocabularyCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lesson.lessonName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'By ${lesson.uploader.name}',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-                SizedBox(height: 12),
-                RichText(
-                  text: TextSpan(
-                    text: 'Difficulty: ',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 14,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: _getDifficultyColor(lesson.level).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(15),
                     ),
+                    child: Center(
+                      child: Icon(
+                        _getDifficultyIcon(lesson.level),
+                        color: _getDifficultyColor(lesson.level),
+                        size: 30,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lesson.lessonName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              lesson.uploader.name,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _buildDifficultyBadge(lesson.level),
+                            SizedBox(width: 8),
+                            Text(
+                              '${lesson.questions.length} words',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isLocked)
+                    ElevatedButton(
+                      style: globalButtonStyle.copyWith(
+                        backgroundColor: MaterialStateProperty.all(
+                          progress == 1.0 ? Colors.green : Colors.purple,
+                        ),
+                      ),
+                      child: Text(
+                        progress == 1.0 ? 'Review' : 'Start',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                VocabularyLessonListPage(lesson: lesson),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+            if (progress > 0 && progress < 1.0)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                  minHeight: 4,
+                ),
+              ),
+            if (isLocked)
+              Container(
+                color: Colors.black.withOpacity(0.7),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextSpan(
-                        text: lesson.level,
+                      Icon(
+                        Icons.lock_outline,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Complete previous lessons',
                         style: TextStyle(
-                          color: _getDifficultyColor(lesson.level),
-                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 12,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  '${lesson.questions.length} questions',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            style: globalButtonStyle,
-            child: const Text('Start'),
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => VocabularyLessonListPage(lesson: lesson),
-                ),
-              );
-            },
-          ),
-        ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDifficultyBadge(String level) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getDifficultyColor(level).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        level,
+        style: TextStyle(
+          color: _getDifficultyColor(level),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -171,6 +305,19 @@ class VocabularyCard extends StatelessWidget {
         return Colors.red;
       default:
         return Colors.blue;
+    }
+  }
+
+  IconData _getDifficultyIcon(String level) {
+    switch (level.toLowerCase()) {
+      case 'basic':
+        return Icons.star_border;
+      case 'intermediate':
+        return Icons.star_half;
+      case 'advanced':
+        return Icons.star;
+      default:
+        return Icons.star_border;
     }
   }
 }

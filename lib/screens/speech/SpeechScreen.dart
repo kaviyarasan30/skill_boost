@@ -6,6 +6,8 @@ import 'package:skill_boost/providers/auth_provider.dart';
 import 'package:skill_boost/screens/speech/SpeechLessonListPage.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
+import 'package:skill_boost/utils/global_app_bar.dart';
+import 'package:lottie/lottie.dart';
 
 class SpeechScreen extends StatelessWidget {
   final SpeechService _speechService = SpeechService();
@@ -14,58 +16,84 @@ class SpeechScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Text(
-          'Speech',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+      appBar: GlobalAppBar(
+        title: 'Speech',
+        achievementCount: 2,
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: 0.5,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Daily Goal: 50%',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '5/10 Exercises',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.account_circle, color: Colors.black, size: 30),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: SearchBar(),
+          ),
+          SizedBox(height: 20),
+          Expanded(
+            child: FutureBuilder<List<SpeechLesson>>(
+              future: _speechService.getSpeechLessons(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: Lottie.network(
+                      'https://assets3.lottiefiles.com/packages/lf20_szviypry.json',
+                      width: 200,
+                      height: 200,
+                    ),
+                  );
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text('No speech lessons available'));
+                }
+
+                return ListView.builder(
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final lesson = snapshot.data![index];
+                    return SpeechCard(
+                      lesson: lesson,
+                      isLocked: index > 2,
+                      progress: index == 0 ? 1.0 : (index == 1 ? 0.3 : 0.0),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
-        automaticallyImplyLeading: false,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SearchBar(),
-            SizedBox(height: 20),
-            // DifficultyFilter(),
-            SizedBox(height: 20),
-            Expanded(
-              child: FutureBuilder<List<SpeechLesson>>(
-                future: _speechService.getSpeechLessons(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: Text('No speech lessons available'));
-                  }
-
-                  return ListView.builder(
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final lesson = snapshot.data![index];
-                      return SpeechCard(lesson: lesson);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
       ),
       bottomNavigationBar: CustomBottomNavigationBar(initialIndex: 1),
     );
@@ -74,14 +102,20 @@ class SpeechScreen extends StatelessWidget {
 
 class SpeechCard extends StatelessWidget {
   final SpeechLesson lesson;
+  final bool isLocked;
+  final double progress;
 
-  const SpeechCard({Key? key, required this.lesson}) : super(key: key);
+  const SpeechCard({
+    Key? key,
+    required this.lesson,
+    this.isLocked = false,
+    this.progress = 0.0,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
-      padding: EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -94,74 +128,160 @@ class SpeechCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lesson.lessonName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'By ${lesson.uploader.name}',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-                SizedBox(height: 12),
-                RichText(
-                  text: TextSpan(
-                    text: 'Difficulty: ',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 14,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: _getLevelColor(lesson.level).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(15),
                     ),
+                    child: Center(
+                      child: Icon(
+                        _getLevelIcon(lesson.level),
+                        color: _getLevelColor(lesson.level),
+                        size: 30,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lesson.lessonName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.person_outline,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              lesson.uploader.name,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _buildDifficultyBadge(lesson.level),
+                            SizedBox(width: 8),
+                            Text(
+                              '${lesson.exercises.length} exercises',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isLocked)
+                    ElevatedButton(
+                      style: globalButtonStyle.copyWith(
+                        backgroundColor: MaterialStateProperty.all(
+                          progress == 1.0 ? Colors.green : Colors.blue,
+                        ),
+                      ),
+                      child: Text(
+                        progress == 1.0 ? 'Review' : 'Start',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                SpeechLessonListPage(lesson: lesson),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+            if (progress > 0 && progress < 1.0)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  minHeight: 4,
+                ),
+              ),
+            if (isLocked)
+              Container(
+                color: Colors.black.withOpacity(0.7),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextSpan(
-                        text: lesson.level,
+                      Icon(
+                        Icons.lock_outline,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Complete previous lessons',
                         style: TextStyle(
-                          color: _getDifficultyColor(lesson.level),
-                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 12,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  '${lesson.exercises.length} exercises',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            style: globalButtonStyle,
-            child: const Text('Start'),
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => SpeechLessonListPage(lesson: lesson),
-                ),
-              );
-            },
-          ),
-        ],
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Color _getDifficultyColor(String level) {
+  Widget _buildDifficultyBadge(String level) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getLevelColor(level).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        level,
+        style: TextStyle(
+          color: _getLevelColor(level),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Color _getLevelColor(String level) {
     switch (level.toLowerCase()) {
       case 'basic':
         return Colors.green;
@@ -171,6 +291,19 @@ class SpeechCard extends StatelessWidget {
         return Colors.red;
       default:
         return Colors.blue;
+    }
+  }
+
+  IconData _getLevelIcon(String level) {
+    switch (level.toLowerCase()) {
+      case 'basic':
+        return Icons.record_voice_over;
+      case 'intermediate':
+        return Icons.mic;
+      case 'advanced':
+        return Icons.campaign;
+      default:
+        return Icons.speaker;
     }
   }
 }

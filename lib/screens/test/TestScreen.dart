@@ -1,29 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
+import 'package:skill_boost/utils/global_app_bar.dart';
 
 class TestScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Text(
-          'Tests',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.account_circle, color: Colors.black, size: 30),
-          ),
-        ],
-        automaticallyImplyLeading: false,
+      appBar: GlobalAppBar(
+        title: 'Tests',
+        showXP: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

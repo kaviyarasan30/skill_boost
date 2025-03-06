@@ -5,6 +5,7 @@ import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/screens/vocabulary/VocabularyQuestionPage.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
+import 'package:lottie/lottie.dart';
 
 class VocabularyLessonListPage extends StatefulWidget {
   final Lesson lesson;
@@ -15,97 +16,198 @@ class VocabularyLessonListPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _VocabularyLessonListPageState createState() => _VocabularyLessonListPageState();
+  _VocabularyLessonListPageState createState() =>
+      _VocabularyLessonListPageState();
 }
 
 class _VocabularyLessonListPageState extends State<VocabularyLessonListPage> {
-  // Track completed questions
   Map<String, bool> completedQuestions = {};
+  bool showSearch = false;
+  String searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
-    // Calculate progress
     int completedCount = completedQuestions.values.where((v) => v).length;
     int totalQuestions = widget.lesson.questions.length;
+    double progress = totalQuestions > 0 ? completedCount / totalQuestions : 0;
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        title: Text(
-          'Vocabulary',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            Text(
+              'Vocabulary',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 10),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.star, color: Colors.amber, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    '${completedCount * 10} XP',
+                    style: TextStyle(
+                      color: Colors.amber[800],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.account_circle, color: Colors.black, size: 30),
+          IconButton(
+            icon: Icon(
+              showSearch ? Icons.close : Icons.search,
+              color: Colors.black,
+            ),
+            onPressed: () => setState(() => showSearch = !showSearch),
+          ),
+          Stack(
+            children: [
+              IconButton(
+                icon: Icon(Icons.emoji_events_outlined, color: Colors.black),
+                onPressed: () {
+                  // Show achievements
+                },
+              ),
+              if (completedCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      completedCount.toString(),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
-        automaticallyImplyLeading: false,
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search questions',
-                prefixIcon: Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.grey.shade200,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
+          Container(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.lesson.lessonName,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundColor: Colors.purple.withOpacity(0.2),
+                      child: Icon(
+                        Icons.person_outline,
+                        size: 16,
+                        color: Colors.purple,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      widget.lesson.uploader.name,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
+                LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    progress == 1.0 ? Colors.green : Colors.purple,
+                  ),
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$completedCount of $totalQuestions completed',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (progress == 1.0)
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Colors.green, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Lesson Completed!',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (showSearch)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: TextField(
+                onChanged: (value) => setState(() => searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Search words',
+                  prefixIcon: Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => MainScreen()),
-                    );
-                  },
-                  icon: Icon(
-                    Icons.arrow_circle_left_outlined,
-                    color: Colors.black,
-                    size: 25,
-                  ),
-                  label: Text(
-                    widget.lesson.lessonName,
-                    style: TextStyle(color: Colors.black, fontSize: 25),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              children: [
-                Icon(Icons.person, size: 16),
-                SizedBox(width: 4),
-                Text(
-                  'Created by ${widget.lesson.uploader.name}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
           SizedBox(height: 16),
           Expanded(
             child: ListView.builder(
@@ -113,8 +215,14 @@ class _VocabularyLessonListPageState extends State<VocabularyLessonListPage> {
               itemCount: widget.lesson.questions.length,
               itemBuilder: (context, index) {
                 final question = widget.lesson.questions[index];
+                if (searchQuery.isNotEmpty &&
+                    !question.question
+                        .toLowerCase()
+                        .contains(searchQuery.toLowerCase())) {
+                  return SizedBox.shrink();
+                }
                 final isCompleted = completedQuestions[question.id] ?? false;
-                
+
                 return QuestionCard(
                   questionNumber: index + 1,
                   question: question,
@@ -138,28 +246,9 @@ class _VocabularyLessonListPageState extends State<VocabularyLessonListPage> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                LinearProgressIndicator(
-                  value: totalQuestions > 0 ? completedCount / totalQuestions : 0,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  '$completedCount of $totalQuestions questions completed',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
+      bottomNavigationBar: CustomBottomNavigationBar(),
     );
   }
 }
@@ -181,85 +270,74 @@ class QuestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      margin: EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(15),
+          child: Container(
+            padding: EdgeInsets.all(16),
+            child: Row(
               children: [
-                Text(
-                  'Question ${questionNumber}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isCompleted
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.purple.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: isCompleted
+                        ? Icon(Icons.check, color: Colors.green)
+                        : Text(
+                            questionNumber.toString(),
+                            style: TextStyle(
+                              color: Colors.purple,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Type: ${question.type}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        question.question,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color:
+                              isCompleted ? Colors.grey[600] : Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Type: ${question.type}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[400],
                 ),
               ],
             ),
           ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 80,
-                height: 32,
-                child: ElevatedButton(
-                  onPressed: onPressed,
-                  style: globalButtonStyle.copyWith(
-                    padding: MaterialStateProperty.all(EdgeInsets.zero),
-                    minimumSize: MaterialStateProperty.all(const Size(80, 32)),
-                    maximumSize: MaterialStateProperty.all(const Size(80, 32)),
-                    textStyle: MaterialStateProperty.all(
-                      const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                    backgroundColor: MaterialStateProperty.all(Colors.black),
-                  ),
-                  child: Text(isCompleted ? 'Review' : 'Start'),
-                ),
-              ),
-              if (isCompleted)
-                Positioned(
-                  top: -30,
-                  right: -10,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.green,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

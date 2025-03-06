@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:skill_boost/models/lesson_model.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 
@@ -16,10 +17,52 @@ class VocabularyQuestionPage extends StatefulWidget {
   _VocabularyQuestionPageState createState() => _VocabularyQuestionPageState();
 }
 
-class _VocabularyQuestionPageState extends State<VocabularyQuestionPage> {
+class _VocabularyQuestionPageState extends State<VocabularyQuestionPage>
+    with SingleTickerProviderStateMixin {
   String? selectedAnswer;
   bool hasSubmitted = false;
   bool showDefinition = false;
+  late AnimationController _confettiController;
+  int points = 0;
+  int streak = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  void _handleAnswer(String answer) {
+    if (hasSubmitted) return;
+
+    setState(() {
+      selectedAnswer = answer;
+      hasSubmitted = true;
+
+      if (answer == widget.question.correctAnswer) {
+        streak++;
+        points += (10 * streak); // Bonus points for streaks
+        _confettiController.forward();
+      } else {
+        streak = 0;
+      }
+    });
+
+    Future.delayed(Duration(seconds: 2), () {
+      if (mounted) {
+        widget.onComplete();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,247 +71,203 @@ class _VocabularyQuestionPageState extends State<VocabularyQuestionPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text(
-          'Vocabulary',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        title: Row(
+          children: [
+            Text(
+              'Vocabulary',
+              style:
+                  TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(width: 10),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.star, color: Colors.amber, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    '$points XP',
+                    style: TextStyle(
+                      color: Colors.amber[800],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.person_outline, color: Colors.black),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          ListTile(
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back),
-              onPressed: () => Navigator.of(context).pop(),
+          Container(
+            margin: EdgeInsets.only(right: 16),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.purple.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
             ),
-            title: Text(
-              'Question ${widget.question.id}',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(widget.question.type),
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
               children: [
-                _buildQuestionCard(),
-                SizedBox(height: 16),
-                ...widget.question.options
-                    .map((option) => _buildAnswerTile(option))
-                    .toList(),
-                if (hasSubmitted) ...[
-                  SizedBox(height: 16),
-                  _buildFeedbackCard(),
-                ],
+                Icon(Icons.local_fire_department,
+                    color: Colors.purple, size: 16),
+                SizedBox(width: 4),
+                Text(
+                  '$streak 🔥',
+                  style: TextStyle(
+                    color: Colors.purple,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
+      body: Stack(
         children: [
-          if (hasSubmitted && !showDefinition)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(vertical: 16),
+          Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Text(
+                          widget.question.question,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (showDefinition) ...[
+                          SizedBox(height: 16),
+                          Text(
+                            widget.question.definition ?? '',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-                onPressed: () {
-                  setState(() {
-                    showDefinition = true;
-                  });
-                },
-                child: Text('Show Definition'),
+                SizedBox(height: 24),
+                ...widget.question.options.map((option) {
+                  final bool isSelected = selectedAnswer == option;
+                  final bool isCorrect =
+                      widget.question.correctAnswer == option;
+                  final Color cardColor = hasSubmitted
+                      ? (isCorrect
+                          ? Colors.green.withOpacity(0.2)
+                          : (isSelected
+                              ? Colors.red.withOpacity(0.2)
+                              : Colors.white))
+                      : (isSelected
+                          ? Colors.purple.withOpacity(0.2)
+                          : Colors.white);
+
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: AnimatedContainer(
+                      duration: Duration(milliseconds: 300),
+                      child: Card(
+                        elevation: isSelected ? 4 : 2,
+                        color: cardColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          side: BorderSide(
+                            color: isSelected
+                                ? (hasSubmitted
+                                    ? (isCorrect ? Colors.green : Colors.red)
+                                    : Colors.purple)
+                                : Colors.grey.withOpacity(0.2),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () => _handleAnswer(option),
+                          borderRadius: BorderRadius.circular(15),
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: isSelected
+                                          ? (hasSubmitted
+                                              ? (isCorrect
+                                                  ? Colors.green[700]
+                                                  : Colors.red[700])
+                                              : Colors.purple[700])
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                if (hasSubmitted && (isCorrect || isSelected))
+                                  Icon(
+                                    isCorrect
+                                        ? Icons.check_circle
+                                        : Icons.cancel,
+                                    color:
+                                        isCorrect ? Colors.green : Colors.red,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+                Spacer(),
+                if (!showDefinition)
+                  TextButton(
+                    onPressed: () => setState(() => showDefinition = true),
+                    child: Text(
+                      'Show Definition',
+                      style: TextStyle(
+                        color: Colors.purple,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (hasSubmitted && selectedAnswer == widget.question.correctAnswer)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Lottie.network(
+                  'https://assets9.lottiefiles.com/packages/lf20_touohxv0.json',
+                  controller: _confettiController,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          if (!hasSubmitted)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                ),
-                onPressed: selectedAnswer == null ? null : _submitAnswer,
-                child: Text('Submit Answer'),
-              ),
-            ),
-          if (showDefinition)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                ),
-                onPressed: () {
-                  widget.onComplete();
-                  Navigator.of(context).pop();
-                },
-                child: Text('Continue'),
-              ),
-            ),
-          CustomBottomNavigationBar(),
         ],
       ),
+      bottomNavigationBar: CustomBottomNavigationBar(),
     );
-  }
-
-  Widget _buildQuestionCard() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.question.type,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-          ),
-          SizedBox(height: 8),
-          Text(
-            widget.question.question,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          if (widget.question.type == "MCQ" ||
-              widget.question.type == "Vocabulary Identification")
-            Text(
-              'Choose the best answer',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-          if (widget.question.type == "Fill in the blanks" ||
-              widget.question.type == "Sentence Completion")
-            Text(
-              'Select the correct word to complete the sentence',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnswerTile(String answer) {
-    bool isSelected = selectedAnswer == answer;
-    bool isCorrect = widget.question.correctAnswer == answer;
-    Color? backgroundColor;
-
-    if (hasSubmitted) {
-      if (isCorrect) {
-        backgroundColor = Colors.green.withOpacity(0.1);
-      } else if (isSelected && !isCorrect) {
-        backgroundColor = Colors.red.withOpacity(0.1);
-      }
-    } else if (isSelected) {
-      backgroundColor = Colors.grey.withOpacity(0.1);
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: hasSubmitted && isCorrect
-              ? Colors.green
-              : hasSubmitted && isSelected && !isCorrect
-                  ? Colors.red
-                  : isSelected
-                      ? Colors.black
-                      : Colors.grey[300]!,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        color: backgroundColor,
-      ),
-      child: ListTile(
-        title: Text(
-          answer,
-          style: TextStyle(
-            color: hasSubmitted && isCorrect
-                ? Colors.green
-                : hasSubmitted && isSelected && !isCorrect
-                    ? Colors.red
-                    : Colors.black,
-          ),
-        ),
-        trailing: hasSubmitted
-            ? Icon(
-                isCorrect ? Icons.check_circle : Icons.cancel,
-                color: isCorrect ? Colors.green : Colors.red,
-              )
-            : null,
-        onTap: hasSubmitted
-            ? null
-            : () {
-                setState(() {
-                  selectedAnswer = answer;
-                });
-              },
-      ),
-    );
-  }
-
-  Widget _buildFeedbackCard() {
-    bool isCorrect = selectedAnswer == widget.question.correctAnswer;
-
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isCorrect
-            ? Colors.green.withOpacity(0.1)
-            : Colors.red.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isCorrect ? Colors.green : Colors.red,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            isCorrect ? 'Correct!' : 'Incorrect',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isCorrect ? Colors.green : Colors.red,
-            ),
-          ),
-          if (showDefinition) ...[
-            SizedBox(height: 8),
-            Text(
-              'Definition:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              widget.question.definition,
-              style: TextStyle(fontSize: 16),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _submitAnswer() {
-    setState(() {
-      hasSubmitted = true;
-    });
   }
 }
