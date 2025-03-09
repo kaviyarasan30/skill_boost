@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:skill_boost/providers/auth_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skill_boost/screens/auth/login_screen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 
@@ -20,6 +19,8 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // Initialize animations
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2500),
       vsync: this,
@@ -39,24 +40,34 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
+    // Start animation
     _controller.forward();
 
-    _initializeAppAndNavigate();
+    // Check login status and navigate
+    _checkLoginStatus();
   }
 
-  Future<void> _initializeAppAndNavigate() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.initializeApp();
+  Future<void> _checkLoginStatus() async {
+    // Wait for animation to complete
+    await Future.delayed(const Duration(milliseconds: 2000));
 
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token'); // Check if token exists
+
+    // Navigate based on token presence
+    if (mounted) {
+      if (token != null) {
+        // User is signed in
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => MainScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => MainScreen()),
+        );
+      } else {
+        // User is not signed in
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => LoginScreen()),
         );
       }
-    });
+    }
   }
 
   @override

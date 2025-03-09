@@ -4,7 +4,7 @@ import 'package:skill_boost/models/pronunciation_lesson_model.dart';
 
 class PronunciationService {
   static const String baseUrl =
-      'https://035c-2409-40f4-3004-18f4-9961-393d-fde0-82da.ngrok-free.app/api';
+      'https://2e1a-2409-40f4-3b-f58a-fc72-150c-735b-a8a4.ngrok-free.app/api';
 
   Future<List<PronunciationLesson>> getPronunciationLessons() async {
     try {

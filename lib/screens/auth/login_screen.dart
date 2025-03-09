@@ -5,6 +5,9 @@ import 'package:skill_boost/screens/auth/password_recovery_screen.dart';
 import 'package:skill_boost/screens/auth/signup_screen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/utils/button_style.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -237,25 +240,29 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final result = await authProvider.signIn(email: email, password: password);
+    // API call for login
+    final response = await http.post(
+      Uri.parse(
+          'https://2e1a-2409-40f4-3b-f58a-fc72-150c-735b-a8a4.ngrok-free.app/api/user/signin'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
 
-    if (result == SignInResult.success) {
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      // Store token in shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', data['token']); // Store the token
+
+      // Navigate to main screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => MainScreen()),
       );
-    } else if (result == SignInResult.userNotFound) {
-      setState(() {
-        _emailError = 'This email is not registered. Please sign up.';
-      });
-    } else if (result == SignInResult.wrongPassword) {
-      setState(() {
-        _passwordError = 'Incorrect password. Please try again.';
-      });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred. Please try again later.')),
-      );
+      final errorData = jsonDecode(response.body);
+      setState(() {
+        _emailError = errorData['error'] ?? 'An error occurred';
+      });
     }
   }
 

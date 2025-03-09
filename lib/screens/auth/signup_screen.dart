@@ -4,6 +4,9 @@ import 'package:skill_boost/providers/auth_provider.dart';
 import 'package:skill_boost/screens/auth/login_screen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/utils/button_style.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -194,35 +197,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _handleSignUp() async {
     bool isValid = true;
 
-
-    if (isValid) {
-      try {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final success = await authProvider.registerUser(
-          name: _fullNameController.text,
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-
-        if (success) {
-          // Navigate to the main screen
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => MainScreen()),
-          );
-        } else {
-          // Show an error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Registration failed. Please try again.')),
-          );
-        }
-      } catch (e) {
-        // Show an error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('An error occurred: $e')),
-        );
-      }
-    }
-  
     // Validate email
     if (!_isValidEmail(_emailController.text)) {
       setState(() {
@@ -248,12 +222,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (isValid) {
-      // All fields are correct, proceed with sign up
-      print('Full Name: ${_fullNameController.text}');
-      print('Email: ${_emailController.text}');
-      print('Password: ${_passwordController.text}');
-      // Implement your sign up logic here
-      // Navigate to the next screen
+      // API call for sign up
+      final response = await http.post(
+        Uri.parse(
+            'https://2e1a-2409-40f4-3b-f58a-fc72-150c-735b-a8a4.ngrok-free.app/api/user/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_name': _fullNameController.text,
+          'email': _emailController.text,
+          'password': _passwordController.text,
+          'confirm_password': _confirmPasswordController.text,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        // Store token in shared preferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', data['token']); // Store the token
+
+        // Navigate to the main screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => MainScreen()),
+        );
+      } else {
+        final errorData = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorData['error'] ?? 'Registration failed')),
+        );
+      }
     }
   }
 

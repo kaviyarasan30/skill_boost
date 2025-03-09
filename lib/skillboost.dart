@@ -21,7 +21,7 @@ class SkillboostApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins',
       ),
-      home: const SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }
