@@ -75,7 +75,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-
   Future<bool> registerUser({
     required String name,
     required String email,
@@ -113,8 +112,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> signOut() async {
-    await _auth.signOut();
+  void logout() {
     _currentUser = null;
     notifyListeners();
   }

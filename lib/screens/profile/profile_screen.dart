@@ -7,7 +7,7 @@ import 'package:lottie/lottie.dart';
 class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context).currentUser;
+    // final user = Provider.of<AuthProvider>(context).currentUser;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -30,14 +30,14 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    user?.name ?? 'User Name',
+                    'User Name',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    user?.email ?? 'user@example.com',
+                    'user@example.com',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16,

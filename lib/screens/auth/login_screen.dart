@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:skill_boost/providers/auth_provider.dart';
 import 'package:skill_boost/screens/auth/password_recovery_screen.dart';
 import 'package:skill_boost/screens/auth/signup_screen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
@@ -243,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // API call for login
     final response = await http.post(
       Uri.parse(
-          'https://2e1a-2409-40f4-3b-f58a-fc72-150c-735b-a8a4.ngrok-free.app/api/user/signin'),
+          'https://c48b-2409-40f4-40c0-2e6c-a989-9319-7944-9135.ngrok-free.app/api/user/signin'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
