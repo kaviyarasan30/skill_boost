@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:skill_boost/api/pronunciation_service.dart';
 import 'package:skill_boost/models/pronunciation_lesson_model.dart';
-import 'package:skill_boost/providers/auth_provider.dart';
+import 'package:skill_boost/providers/pronunciation_provider.dart';
 import 'package:skill_boost/screens/Pronunciation/PronunciationLessonListPage.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
 import 'package:skill_boost/utils/global_app_bar.dart';
 import 'package:lottie/lottie.dart';
 
-class PronunciationScreen extends StatelessWidget {
-  final PronunciationService _pronunciationService = PronunciationService();
+class PronunciationScreen extends StatefulWidget {
+  @override
+  _PronunciationScreenState createState() => _PronunciationScreenState();
+}
+
+class _PronunciationScreenState extends State<PronunciationScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch data when the screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<PronunciationProvider>(context, listen: false)
+          .fetchPronunciationLessons();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,10 +74,9 @@ class PronunciationScreen extends StatelessWidget {
           ),
           SizedBox(height: 20),
           Expanded(
-            child: FutureBuilder<List<PronunciationLesson>>(
-              future: _pronunciationService.getPronunciationLessons(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            child: Consumer<PronunciationProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading) {
                   return Center(
                     child: Lottie.network(
                       'https://assets1.lottiefiles.com/packages/lf20_qm8eqzse.json',
@@ -73,17 +84,17 @@ class PronunciationScreen extends StatelessWidget {
                       height: 200,
                     ),
                   );
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                } else if (provider.error.isNotEmpty) {
+                  return Center(child: Text('Error: ${provider.error}'));
+                } else if (provider.lessons.isEmpty) {
                   return Center(
                       child: Text('No pronunciation lessons available'));
                 }
 
                 return ListView.builder(
-                  itemCount: snapshot.data!.length,
+                  itemCount: provider.lessons.length,
                   itemBuilder: (context, index) {
-                    final lesson = snapshot.data![index];
+                    final lesson = provider.lessons[index];
                     return PronunciationCard(
                       lesson: lesson,
                       isLocked: index > 2,
@@ -101,6 +112,7 @@ class PronunciationScreen extends StatelessWidget {
   }
 }
 
+// The PronunciationCard class remains the same
 class PronunciationCard extends StatelessWidget {
   final PronunciationLesson lesson;
   final bool isLocked;

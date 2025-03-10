@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:skill_boost/models/speech_lesson_model.dart';
+import 'package:skill_boost/utils/api_constants.dart';
 
 class SpeechService {
-  static const String baseUrl =
-      'https://c48b-2409-40f4-40c0-2e6c-a989-9319-7944-9135.ngrok-free.app/api';
+  final String baseUrl = ApiConstants.baseUrl;
 
   Future<List<SpeechLesson>> getSpeechLessons() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/speech'));
+      final response = await http.get(
+          Uri.parse('$baseUrl${ApiConstants.speechEndpoint}'));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);

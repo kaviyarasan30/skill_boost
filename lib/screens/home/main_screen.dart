@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:skill_boost/api/lesson_service.dart';
 import 'package:skill_boost/models/lesson_model.dart';
-import 'package:skill_boost/providers/auth_provider.dart';
+import 'package:skill_boost/providers/lesson_provider.dart';
 import 'package:skill_boost/screens/vocabulary/VocabularyLessonListPage.dart';
-import 'package:skill_boost/screens/profile/profile_screen.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
 import 'package:skill_boost/utils/global_app_bar.dart';
 import 'package:lottie/lottie.dart';
 
-class MainScreen extends StatelessWidget {
-  final LessonService _lessonService = LessonService();
+class MainScreen extends StatefulWidget {
+  @override
+  _MainScreenState createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch lessons when the screen initializes
+    Future.microtask(() => 
+      Provider.of<LessonProvider>(context, listen: false).fetchLessons()
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,10 +85,9 @@ class MainScreen extends StatelessWidget {
           ),
           SizedBox(height: 20),
           Expanded(
-            child: FutureBuilder<List<Lesson>>(
-              future: _lessonService.getLessons(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            child: Consumer<LessonProvider>(
+              builder: (context, lessonProvider, child) {
+                if (lessonProvider.isLoading) {
                   return Center(
                     child: Lottie.network(
                       'https://assets1.lottiefiles.com/packages/lf20_qm8eqzse.json',
@@ -86,17 +95,17 @@ class MainScreen extends StatelessWidget {
                       height: 200,
                     ),
                   );
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                } else if (lessonProvider.error.isNotEmpty) {
+                  return Center(child: Text('Error: ${lessonProvider.error}'));
+                } else if (lessonProvider.lessons.isEmpty) {
                   return Center(child: Text('No lessons available'));
                 }
 
                 return ListView.builder(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: snapshot.data!.length,
+                  itemCount: lessonProvider.lessons.length,
                   itemBuilder: (context, index) {
-                    final lesson = snapshot.data![index];
+                    final lesson = lessonProvider.lessons[index];
                     return VocabularyCard(
                       lesson: lesson,
                       isLocked: index > 2,

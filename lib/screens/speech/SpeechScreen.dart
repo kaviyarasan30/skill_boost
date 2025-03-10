@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:skill_boost/api/speech_service.dart';
 import 'package:skill_boost/models/speech_lesson_model.dart';
-import 'package:skill_boost/providers/auth_provider.dart';
+import 'package:skill_boost/providers/speech_provider.dart';
 import 'package:skill_boost/screens/speech/SpeechLessonListPage.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 import 'package:skill_boost/utils/button_style.dart';
 import 'package:skill_boost/utils/global_app_bar.dart';
 import 'package:lottie/lottie.dart';
 
-class SpeechScreen extends StatelessWidget {
-  final SpeechService _speechService = SpeechService();
+class SpeechScreen extends StatefulWidget {
+  @override
+  _SpeechScreenState createState() => _SpeechScreenState();
+}
+
+class _SpeechScreenState extends State<SpeechScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch data when the screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SpeechProvider>(context, listen: false).fetchSpeechLessons();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,10 +73,9 @@ class SpeechScreen extends StatelessWidget {
           ),
           SizedBox(height: 20),
           Expanded(
-            child: FutureBuilder<List<SpeechLesson>>(
-              future: _speechService.getSpeechLessons(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            child: Consumer<SpeechProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading) {
                   return Center(
                     child: Lottie.network(
                       'https://assets3.lottiefiles.com/packages/lf20_szviypry.json',
@@ -73,16 +83,16 @@ class SpeechScreen extends StatelessWidget {
                       height: 200,
                     ),
                   );
-                } else if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                } else if (provider.error.isNotEmpty) {
+                  return Center(child: Text('Error: ${provider.error}'));
+                } else if (provider.lessons.isEmpty) {
                   return Center(child: Text('No speech lessons available'));
                 }
 
                 return ListView.builder(
-                  itemCount: snapshot.data!.length,
+                  itemCount: provider.lessons.length,
                   itemBuilder: (context, index) {
-                    final lesson = snapshot.data![index];
+                    final lesson = provider.lessons[index];
                     return SpeechCard(
                       lesson: lesson,
                       isLocked: index > 2,
