@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:skill_boost/providers/auth_provider.dart';
 import 'package:skill_boost/utils/global_app_bar.dart';
 import 'package:lottie/lottie.dart';
 

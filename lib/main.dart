@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:skill_boost/providers/auth_providers.dart';
 import 'package:skill_boost/providers/lesson_provider.dart';
 import 'package:skill_boost/providers/pronunciation_provider.dart';
 import 'package:skill_boost/providers/speech_provider.dart';
@@ -16,6 +17,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => locator<AuthProvider>()),
         ChangeNotifierProvider(create: (_) => locator<LessonProvider>()),
         ChangeNotifierProvider(create: (_) => locator<PronunciationProvider>()),
         ChangeNotifierProvider(create: (_) => locator<SpeechProvider>()),
@@ -28,6 +30,9 @@ void main() async {
 Future<void> _initializeApp() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   setupLocator();
+
+  // Initialize auth state
+  await locator<AuthProvider>().initAuthState();
 
   await Permission.notification.isDenied.then((value) {
     if (value) {

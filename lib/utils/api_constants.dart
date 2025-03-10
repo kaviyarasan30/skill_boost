@@ -6,4 +6,6 @@ class ApiConstants {
   static const String lessonsEndpoint = '/files';
   static const String pronunciationEndpoint = '/pronunciation';
   static const String speechEndpoint = '/speech';
+  static const String signupEndpoint = '/user/signup';
+  static const String loginEndpoint = '/user/signin';
 }

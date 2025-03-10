@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:skill_boost/providers/auth_providers.dart';
 import 'package:skill_boost/screens/auth/login_screen.dart';
 import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/utils/button_style.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -26,6 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -114,11 +115,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           !_confirmPasswordVisible),
                                 ),
                               ),
+                              // Show error message from provider if exists
+                              if (authProvider.error.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    authProvider.error,
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
                               const SizedBox(height: 24),
                               ElevatedButton(
-                                onPressed: _handleSignUp,
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : _handleSignUp,
                                 style: globalButtonStyle,
-                                child: const Text('Sign Up'),
+                                child: authProvider.isLoading
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white)
+                                    : const Text('Sign Up'),
                               ),
                               const SizedBox(height: 16),
                               TextButton(
@@ -220,35 +235,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (isValid) {
-      // API call for sign up
-      final response = await http.post(
-        Uri.parse(
-            'https://c48b-2409-40f4-40c0-2e6c-a989-9319-7944-9135.ngrok-free.app/api/user/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_name': _fullNameController.text,
-          'email': _emailController.text,
-          'password': _passwordController.text,
-          'confirm_password': _confirmPasswordController.text,
-        }),
+      // Use AuthProvider for registration
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.register(
+        _fullNameController.text,
+        _emailController.text,
+        _passwordController.text,
+        _confirmPasswordController.text,
       );
 
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        // Store token in shared preferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', data['token']); // Store the token
-
+      if (success) {
         // Navigate to the main screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MainScreen()),
         );
-      } else {
-        final errorData = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorData['error'] ?? 'Registration failed')),
-        );
       }
+      // If not successful, the error is already set in the provider and displayed in the UI
     }
   }
 
