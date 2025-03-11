@@ -5,6 +5,7 @@ import 'package:skill_boost/screens/home/main_screen.dart';
 import 'package:skill_boost/screens/speech/SpeechScreen.dart';
 import 'package:skill_boost/screens/test/TestScreen.dart';
 import 'package:skill_boost/screens/report/ReportScreen.dart';
+import 'package:skill_boost/utils/colors.dart';
 
 class CustomBottomNavigationBar extends StatefulWidget {
   final int initialIndex;
@@ -100,10 +101,10 @@ class _CustomBottomNavigationBarState extends State<CustomBottomNavigationBar> {
             child: Icon(Icons.bar_chart, size: 30, color: Colors.white),
           ),
         ],
-        color: Colors.blue.shade600,
-        buttonBackgroundColor: Colors.blue.shade700,
+        color: Colors.blueGrey.shade400,
+        buttonBackgroundColor: Colors.black.withOpacity(0.9),
         backgroundColor: Colors.transparent,
-        animationCurve: Curves.easeInOut,
+        animationCurve: Curves.slowMiddle,
         animationDuration: Duration(milliseconds: 600),
         onTap: onTabTapped,
         letIndexChange: (index) => true,
