@@ -4,11 +4,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:skill_boost/providers/auth_providers.dart';
 import 'package:skill_boost/providers/lesson_provider.dart';
+import 'package:skill_boost/providers/profile_provider.dart';
 import 'package:skill_boost/providers/pronunciation_provider.dart';
 import 'package:skill_boost/providers/speech_provider.dart';
-
 import 'package:skill_boost/skillboost.dart';
-
 import 'helpers/locator.dart';
 
 void main() async {
@@ -21,6 +20,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => locator<LessonProvider>()),
         ChangeNotifierProvider(create: (_) => locator<PronunciationProvider>()),
         ChangeNotifierProvider(create: (_) => locator<SpeechProvider>()),
+         ChangeNotifierProvider(create: (_) => locator<ProfileProvider>()),
       ],
       child: const SkillboostApp(),
     ),
