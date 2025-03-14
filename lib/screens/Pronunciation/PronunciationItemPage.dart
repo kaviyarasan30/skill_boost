@@ -1,13 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:skill_boost/api/profile_service.dart';
 import 'dart:async';
 import 'package:skill_boost/models/pronunciation_lesson_model.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:convert';
+
+// Add this class to store recording data
+class RecordingData {
+  final String questionId;
+  final String recordingPath;
+  final DateTime timestamp;
+
+  RecordingData({
+    required this.questionId,
+    required this.recordingPath,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'questionId': questionId,
+        'recordingPath': recordingPath,
+        'timestamp': timestamp.toIso8601String(),
+      };
+}
 
 class PronunciationItemPage extends StatefulWidget {
   final PronunciationItem pronunciationItem;
   final String lessonName;
   final int totalItems;
   final int currentIndex;
+  final String lessonId;
+  final Map<int, RecordingData> previousRecordings;
 
   const PronunciationItemPage({
     Key? key,
@@ -15,6 +38,8 @@ class PronunciationItemPage extends StatefulWidget {
     required this.lessonName,
     required this.totalItems,
     required this.currentIndex,
+    required this.lessonId,
+    this.previousRecordings = const {},
   }) : super(key: key);
 
   @override
@@ -32,6 +57,9 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
   bool _isInitialized = false;
   late AnimationController _animationController;
   bool _showWord = false;
+  // Add this to store recordings
+  final Map<int, RecordingData> _recordings = {};
+  String? _userId;
 
   @override
   void initState() {
@@ -41,6 +69,9 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
       duration: const Duration(milliseconds: 300),
     );
     _initAudioPlayer();
+    _loadUserId();
+    // Load previous recordings
+    _recordings.addAll(widget.previousRecordings);
   }
 
   Future<void> _initAudioPlayer() async {
@@ -143,34 +174,19 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black, size: 20),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
-        ),
-        actions: [
-          Padding(
+    return WillPopScope(
+      onWillPop: () async {
+        // Return recordings when back button is pressed
+        Navigator.of(context).pop({'recordings': _recordings});
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          leading: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Container(
               decoration: BoxDecoration(
@@ -185,46 +201,69 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
                 ],
               ),
               child: IconButton(
-                icon: const Icon(Icons.help_outline,
-                    color: Colors.black, size: 20),
-                onPressed: () {
-                  // Show help dialog
-                  showDialog(
-                    context: context,
-                    builder: (context) => _buildInstructionsDialog(),
-                  );
-                },
+                icon:
+                    const Icon(Icons.arrow_back, color: Colors.black, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  _buildExerciseHeader(),
-                  Expanded(child: _buildExerciseContent()),
-                ],
+          actions: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.help_outline,
+                      color: Colors.black, size: 20),
+                  onPressed: () {
+                    // Show help dialog
+                    showDialog(
+                      context: context,
+                      builder: (context) => _buildInstructionsDialog(),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+        body: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildExerciseHeader(),
+                    Expanded(child: _buildExerciseContent()),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -531,13 +570,12 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
               child: ElevatedButton(
                 onPressed: () {
                   if (widget.currentIndex < widget.totalItems - 1) {
-                    Navigator.of(context).pop(widget.currentIndex + 1);
+                    Navigator.of(context).pop({
+                      'nextIndex': widget.currentIndex + 1,
+                      'recordings': _recordings,
+                    });
                   } else {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => _buildCompletionDialog(),
-                    );
+                    _showCompletionDialog();
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -682,6 +720,14 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
         _recordingStatus = 'Recording saved! ✓';
         _showWord = true;
 
+        // Store recording data with question ID
+        _recordings[widget.currentIndex] = RecordingData(
+          questionId: widget.pronunciationItem.id ?? 'unknown',
+          recordingPath:
+              'recording_${widget.lessonId}_${widget.currentIndex}.mp3',
+          timestamp: DateTime.now(),
+        );
+
         // Auto-navigate after showing the word
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted && _hasRecorded) {
@@ -704,85 +750,34 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
     });
   }
 
-  Color _getTypeColor(String type) {
-    switch (type) {
-      case 'Repeat After Me':
-        return Colors.blue;
-      case 'Tap & Listen':
-        return Colors.green;
-      case 'Phoneme Fix':
-        return Colors.red;
-      case 'Word Matching':
-        return Colors.purple;
-      case 'Slow & Fast Mode':
-        return Colors.orange;
-      case 'Vowel Focus':
-        return Colors.teal;
-      case 'Consonant Challenge':
-        return Colors.indigo;
-      case 'Minimal Pairs Game':
-        return Colors.amber;
-      case 'Rhyme Time':
-        return Colors.deepOrange;
-      case 'Listen & Choose':
-        return Colors.brown;
-      default:
-        return Colors.blueGrey;
+  void _logLessonCompletion() {
+    if (_userId == null || _userId == 'unknown') {
+      print('Warning: User ID is not available');
     }
+
+    // Create completion data with actual lesson ID and user ID
+    final completionData = {
+      'userId': _userId ?? 'unknown',
+      'lessonId': widget.lessonId,
+      'lessonName': widget.lessonName,
+      'completedAt': DateTime.now().toIso8601String(),
+      'totalQuestions': widget.totalItems,
+      'completedQuestions': _recordings.length,
+      'recordings':
+          _recordings.values.map((recording) => recording.toJson()).toList(),
+    };
+
+    // Log the completion data
+    print('Lesson Completion Data:');
+    print(jsonEncode(completionData)); // More readable format
   }
 
-  IconData _getTypeIcon(String type) {
-    switch (type) {
-      case 'Repeat After Me':
-        return Icons.volume_up;
-      case 'Tap & Listen':
-        return Icons.mic;
-      case 'Phoneme Fix':
-        return Icons.error;
-      case 'Word Matching':
-        return Icons.check;
-      case 'Slow & Fast Mode':
-        return Icons.speed;
-      case 'Vowel Focus':
-        return Icons.volume_up;
-      case 'Consonant Challenge':
-        return Icons.error;
-      case 'Minimal Pairs Game':
-        return Icons.compare_arrows;
-      case 'Rhyme Time':
-        return Icons.music_note;
-      case 'Listen & Choose':
-        return Icons.mic;
-      default:
-        return Icons.volume_up;
-    }
-  }
-
-  String _getInstructions(String type) {
-    switch (type) {
-      case 'Repeat After Me':
-        return 'Listen to the correct pronunciation first, then record yourself saying the word exactly as you heard it.';
-      case 'Tap & Listen':
-        return 'Tap the listen button to hear the correct pronunciation multiple times. Focus on the sound patterns.';
-      case 'Phoneme Fix':
-        return 'This word contains a common pronunciation error. Listen carefully to the correct version and focus on the highlighted phoneme when you repeat it.';
-      case 'Word Matching':
-        return 'Listen to the audio and identify the correct word. Record yourself saying it properly.';
-      case 'Slow & Fast Mode':
-        return 'Listen to the slow version first, then try the faster version. Record at both speeds to practice.';
-      case 'Vowel Focus':
-        return 'Focus on the vowel sound in this word. Pay attention to how your mouth and lips are positioned.';
-      case 'Consonant Challenge':
-        return 'This word focuses on a particular consonant sound. Pay attention to tongue position and airflow.';
-      case 'Minimal Pairs Game':
-        return 'Practice distinguishing between similar-sounding words that differ by just one sound.';
-      case 'Rhyme Time':
-        return 'Listen to the word and practice saying other words that rhyme with it to reinforce the sound pattern.';
-      case 'Listen & Choose':
-        return 'Listen to multiple pronunciations and identify the correct one. Then record yourself saying the word correctly.';
-      default:
-        return 'Listen carefully to the audio pronunciation and record yourself saying the word.';
-    }
+  void _showCompletionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _buildCompletionDialog(),
+    );
   }
 
   Widget _buildCompletionDialog() {
@@ -845,10 +840,14 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      // Pop twice to go back to lesson list
+                      // Log completion data before navigating
+                      _logLessonCompletion();
+
+                      // Pop with recordings data
                       Navigator.of(context)
                         ..pop() // Close dialog
-                        ..pop(); // Go back to lesson list
+                        ..pop(
+                            _recordings); // Return to lesson list with recordings
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple[700],
@@ -953,6 +952,109 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
         ),
       ),
     );
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type) {
+      case 'Repeat After Me':
+        return Colors.blue;
+      case 'Tap & Listen':
+        return Colors.green;
+      case 'Phoneme Fix':
+        return Colors.red;
+      case 'Word Matching':
+        return Colors.purple;
+      case 'Slow & Fast Mode':
+        return Colors.orange;
+      case 'Vowel Focus':
+        return Colors.teal;
+      case 'Consonant Challenge':
+        return Colors.indigo;
+      case 'Minimal Pairs Game':
+        return Colors.amber;
+      case 'Rhyme Time':
+        return Colors.deepOrange;
+      case 'Listen & Choose':
+        return Colors.brown;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  IconData _getTypeIcon(String type) {
+    switch (type) {
+      case 'Repeat After Me':
+        return Icons.volume_up;
+      case 'Tap & Listen':
+        return Icons.mic;
+      case 'Phoneme Fix':
+        return Icons.error;
+      case 'Word Matching':
+        return Icons.check;
+      case 'Slow & Fast Mode':
+        return Icons.speed;
+      case 'Vowel Focus':
+        return Icons.volume_up;
+      case 'Consonant Challenge':
+        return Icons.error;
+      case 'Minimal Pairs Game':
+        return Icons.compare_arrows;
+      case 'Rhyme Time':
+        return Icons.music_note;
+      case 'Listen & Choose':
+        return Icons.mic;
+      default:
+        return Icons.volume_up;
+    }
+  }
+
+  String _getInstructions(String type) {
+    switch (type) {
+      case 'Repeat After Me':
+        return 'Listen to the correct pronunciation first, then record yourself saying the word exactly as you heard it.';
+      case 'Tap & Listen':
+        return 'Tap the listen button to hear the correct pronunciation multiple times. Focus on the sound patterns.';
+      case 'Phoneme Fix':
+        return 'This word contains a common pronunciation error. Listen carefully to the correct version and focus on the highlighted phoneme when you repeat it.';
+      case 'Word Matching':
+        return 'Listen to the audio and identify the correct word. Record yourself saying it properly.';
+      case 'Slow & Fast Mode':
+        return 'Listen to the slow version first, then try the faster version. Record at both speeds to practice.';
+      case 'Vowel Focus':
+        return 'Focus on the vowel sound in this word. Pay attention to how your mouth and lips are positioned.';
+      case 'Consonant Challenge':
+        return 'This word focuses on a particular consonant sound. Pay attention to tongue position and airflow.';
+      case 'Minimal Pairs Game':
+        return 'Practice distinguishing between similar-sounding words that differ by just one sound.';
+      case 'Rhyme Time':
+        return 'Listen to the word and practice saying other words that rhyme with it to reinforce the sound pattern.';
+      case 'Listen & Choose':
+        return 'Listen to multiple pronunciations and identify the correct one. Then record yourself saying the word correctly.';
+      default:
+        return 'Listen carefully to the audio pronunciation and record yourself saying the word.';
+    }
+  }
+
+  Future<void> _loadUserId() async {
+    try {
+      final profileService = ProfileService();
+      final userId = await profileService.getCurrentUserId();
+      if (mounted) {
+        setState(() {
+          _userId = userId ?? 'unknown';
+        });
+      }
+      if (userId == null) {
+        print('Warning: No user ID found in SharedPreferences');
+      }
+    } catch (e) {
+      print('Error loading user ID: $e');
+      if (mounted) {
+        setState(() {
+          _userId = 'unknown';
+        });
+      }
+    }
   }
 
   @override

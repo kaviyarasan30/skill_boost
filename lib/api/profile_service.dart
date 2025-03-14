@@ -11,6 +11,16 @@ class ProfileService {
     return prefs.getString('token');
   }
 
+  Future<String?> getCurrentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('userId');
+    } catch (e) {
+      print('Error getting current user ID: $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>> getUserDetails(String userId) async {
     try {
       final token = await _getToken();
@@ -38,6 +48,9 @@ class ProfileService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userId', userId);
+
         return {
           'success': true,
           'user': data['user'] ?? {},

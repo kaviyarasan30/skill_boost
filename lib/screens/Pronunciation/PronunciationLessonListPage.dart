@@ -3,31 +3,48 @@ import 'package:skill_boost/models/pronunciation_lesson_model.dart';
 import 'package:skill_boost/screens/Pronunciation/PronunciationItemPage.dart';
 import 'package:skill_boost/utils/CustomBottomNavigationBar.dart';
 
-class PronunciationLessonListPage extends StatelessWidget {
+class PronunciationLessonListPage extends StatefulWidget {
   final PronunciationLesson lesson;
 
   const PronunciationLessonListPage({Key? key, required this.lesson})
       : super(key: key);
+
+  @override
+  _PronunciationLessonListPageState createState() =>
+      _PronunciationLessonListPageState();
+}
+
+class _PronunciationLessonListPageState
+    extends State<PronunciationLessonListPage> {
+  Map<int, RecordingData> _allRecordings = {};
 
   void _navigateToExercise(BuildContext context, int index) {
     Navigator.of(context)
         .push(
       MaterialPageRoute(
         builder: (context) => PronunciationItemPage(
-          pronunciationItem: lesson.pronunciations[index],
-          lessonName: lesson.lessonName,
-          totalItems: lesson.pronunciations.length,
+          pronunciationItem: widget.lesson.pronunciations[index],
+          lessonName: widget.lesson.lessonName,
+          totalItems: widget.lesson.pronunciations.length,
           currentIndex: index,
+          lessonId: widget.lesson.id ?? 'unknown',
+          previousRecordings: _allRecordings,
         ),
       ),
     )
         .then((value) {
-      // Handle any post-exercise logic here if needed
-      if (value != null &&
-          value is int &&
-          value < lesson.pronunciations.length) {
-        // If there's a next exercise, navigate to it
-        _navigateToExercise(context, value);
+      if (value != null) {
+        if (value is Map<String, dynamic>) {
+          if (value.containsKey('recordings')) {
+            setState(() {
+              _allRecordings =
+                  Map<int, RecordingData>.from(value['recordings']);
+            });
+          }
+          if (value.containsKey('nextIndex')) {
+            _navigateToExercise(context, value['nextIndex']);
+          }
+        }
       }
     });
   }
@@ -40,7 +57,7 @@ class PronunciationLessonListPage extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Text(
-          lesson.lessonName,
+          widget.lesson.lessonName,
           style: const TextStyle(
             color: Colors.black,
             fontSize: 24,
@@ -82,13 +99,15 @@ class PronunciationLessonListPage extends StatelessWidget {
                   mainAxisSpacing: 16,
                   childAspectRatio: 0.85,
                 ),
-                itemCount: lesson.pronunciations.length,
+                itemCount: widget.lesson.pronunciations.length,
                 itemBuilder: (context, index) {
-                  final pronunciationItem = lesson.pronunciations[index];
+                  final pronunciationItem = widget.lesson.pronunciations[index];
+                  final isCompleted = _allRecordings.containsKey(index);
                   return PronunciationItemCard(
                     pronunciationItem: pronunciationItem,
                     index: index,
                     onTap: () => _navigateToExercise(context, index),
+                    isCompleted: isCompleted,
                   );
                 },
               ),
@@ -123,7 +142,7 @@ class PronunciationLessonListPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${lesson.pronunciations.length} exercises to complete',
+                    '${widget.lesson.pronunciations.length} exercises to complete',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -175,7 +194,9 @@ class PronunciationLessonListPage extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _buildStatItem('Exercises', '${lesson.pronunciations.length}',
+                _buildStatItem(
+                    'Exercises',
+                    '${widget.lesson.pronunciations.length}',
                     Icons.format_list_numbered),
                 _buildDivider(),
                 _buildStatItem('Completed', '0', Icons.check_circle_outline),
@@ -228,12 +249,14 @@ class PronunciationItemCard extends StatelessWidget {
   final PronunciationItem pronunciationItem;
   final int index;
   final VoidCallback onTap;
+  final bool isCompleted;
 
   const PronunciationItemCard({
     Key? key,
     required this.pronunciationItem,
     required this.index,
     required this.onTap,
+    this.isCompleted = false,
   }) : super(key: key);
 
   @override
@@ -247,6 +270,8 @@ class PronunciationItemCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
+            border:
+                isCompleted ? Border.all(color: Colors.green, width: 2) : null,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -256,68 +281,92 @@ class PronunciationItemCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      _getTypeColor(pronunciationItem.type).withOpacity(0.2),
-                      _getTypeColor(pronunciationItem.type).withOpacity(0.1),
-                    ],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: _getTypeColor(pronunciationItem.type)
-                          .withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          _getTypeColor(pronunciationItem.type)
+                              .withOpacity(0.2),
+                          _getTypeColor(pronunciationItem.type)
+                              .withOpacity(0.1),
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _getTypeColor(pronunciationItem.type)
+                              .withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Icon(
-                  _getTypeIcon(pronunciationItem.type),
-                  color: _getTypeColor(pronunciationItem.type),
-                  size: 32,
-                ),
+                    child: Icon(
+                      _getTypeIcon(pronunciationItem.type),
+                      color: _getTypeColor(pronunciationItem.type),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getTypeColor(pronunciationItem.type)
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      pronunciationItem.type,
+                      style: TextStyle(
+                        color: _getTypeColor(pronunciationItem.type),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      pronunciationItem.hint,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getTypeColor(pronunciationItem.type).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  pronunciationItem.type,
-                  style: TextStyle(
-                    color: _getTypeColor(pronunciationItem.type),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              if (isCompleted)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  pronunciationItem.hint,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
             ],
           ),
         ),
