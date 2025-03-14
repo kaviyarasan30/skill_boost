@@ -223,7 +223,7 @@ class _MainScreenState extends State<MainScreen>
                 children: [
                   Center(
                     child: Icon(
-                      Icons.filter_list,
+                      Icons.tune,
                       color: Colors.white,
                       size: 24,
                     ),
@@ -632,15 +632,6 @@ class EnhancedVocabularyCard extends StatelessWidget {
                   ),
                   minHeight: 8,
                 ),
-              ),
-            ),
-            SizedBox(width: 8),
-            Text(
-              '${(progress * 100).toInt()}%',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
               ),
             ),
           ],
