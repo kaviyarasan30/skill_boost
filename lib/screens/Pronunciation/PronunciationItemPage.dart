@@ -720,13 +720,18 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
         _recordingStatus = 'Recording saved! ✓';
         _showWord = true;
 
-        // Store recording data with question ID
+        // Store recording data with current question index
         _recordings[widget.currentIndex] = RecordingData(
           questionId: widget.pronunciationItem.id ?? 'unknown',
           recordingPath:
               'recording_${widget.lessonId}_${widget.currentIndex}.mp3',
           timestamp: DateTime.now(),
         );
+
+        // Print debug info for verification
+        print(
+            'Recording saved for question ${widget.currentIndex + 1}/${widget.totalItems}');
+        print('Current recordings count: ${_recordings.length}');
 
         // Auto-navigate after showing the word
         Future.delayed(const Duration(seconds: 3), () {
@@ -751,11 +756,17 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
   }
 
   void _logLessonCompletion() {
-    if (_userId == null || _userId == 'unknown') {
-      print('Warning: User ID is not available');
-    }
+    // Sort recordings by index to ensure proper order
+    final sortedRecordings = List.generate(widget.totalItems, (index) {
+      return _recordings[index]?.toJson() ??
+          {
+            'questionId': 'unknown',
+            'recordingPath': 'missing_recording_$index',
+            'timestamp': DateTime.now().toIso8601String()
+          };
+    });
 
-    // Create completion data with actual lesson ID and user ID
+    // Create completion data
     final completionData = {
       'userId': _userId ?? 'unknown',
       'lessonId': widget.lessonId,
@@ -763,13 +774,12 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
       'completedAt': DateTime.now().toIso8601String(),
       'totalQuestions': widget.totalItems,
       'completedQuestions': _recordings.length,
-      'recordings':
-          _recordings.values.map((recording) => recording.toJson()).toList(),
+      'recordings': sortedRecordings
     };
 
-    // Log the completion data
-    print('Lesson Completion Data:');
-    print(jsonEncode(completionData)); // More readable format
+    // Log only the data that would be sent to backend
+    const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+    print(encoder.convert(completionData));
   }
 
   void _showCompletionDialog() {

@@ -1,6 +1,6 @@
 class ApiConstants {
   static const String baseUrl =
-      'https://726c-2409-40f4-2e-6493-c995-ff8f-2bac-569e.ngrok-free.app/api';
+      'https://6e08-2409-40f4-a2-2742-e910-d69a-bdfe-e348.ngrok-free.app/api';
 
   // Endpoints
   static const String lessonsEndpoint = '/files';
