@@ -4,24 +4,47 @@ import 'dart:async';
 import 'package:skill_boost/models/pronunciation_lesson_model.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'package:skill_boost/providers/pronunciationfeedback_provider.dart';
+import 'package:skill_boost/screens/Pronunciation/PronunciationFeedbackScreen.dart';
+import 'package:record/record.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Add this class to store recording data
 class RecordingData {
   final String questionId;
   final String recordingPath;
   final DateTime timestamp;
+  final File? audioFile;
 
   RecordingData({
     required this.questionId,
     required this.recordingPath,
     required this.timestamp,
-  });
+    this.audioFile,
+  }) {
+    // Validate data at construction time
+    if (questionId.trim().isEmpty) {
+      throw ArgumentError('questionId cannot be empty');
+    }
+    if (recordingPath.trim().isEmpty) {
+      throw ArgumentError('recordingPath cannot be empty');
+    }
+  }
 
   Map<String, dynamic> toJson() => {
-        'questionId': questionId,
-        'recordingPath': recordingPath,
+        'questionId': questionId.trim(),
+        'recordingPath': recordingPath.trim(),
         'timestamp': timestamp.toIso8601String(),
+        'audioFile': audioFile,
       };
+
+  @override
+  String toString() {
+    return 'RecordingData(questionId: $questionId, recordingPath: $recordingPath, timestamp: $timestamp, audioFile: ${audioFile?.path})';
+  }
 }
 
 class PronunciationItemPage extends StatefulWidget {
@@ -57,8 +80,10 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
   bool _isInitialized = false;
   late AnimationController _animationController;
   bool _showWord = false;
-  // Add this to store recordings
-  final Map<int, RecordingData> _recordings = {};
+  late final AudioRecorder _audioRecorder;
+  Timer? _wordTimer;
+  Map<int, RecordingData> _recordings = {};
+  int _currentIndex = 0;
   String? _userId;
 
   @override
@@ -70,8 +95,10 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
     );
     _initAudioPlayer();
     _loadUserId();
-    // Load previous recordings
+    _requestPermissions();
+    _audioRecorder = AudioRecorder();
     _recordings.addAll(widget.previousRecordings);
+    _currentIndex = widget.currentIndex;
   }
 
   Future<void> _initAudioPlayer() async {
@@ -169,6 +196,312 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
       });
       _isInitialized = false;
       await _initAudioPlayer();
+    }
+  }
+
+  Future<void> _requestPermissions() async {
+    try {
+      final status = await Permission.microphone.status;
+
+      if (status.isDenied || status.isRestricted) {
+        // Show a dialog explaining why we need the permission
+        final shouldShowRationale = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.mic, color: Colors.purple[700]),
+                const SizedBox(width: 10),
+                const Text('Microphone Access Needed'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'To practice pronunciation, we need access to your microphone to:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                _buildPermissionItem(
+                  icon: Icons.record_voice_over,
+                  text: 'Record your pronunciation',
+                ),
+                _buildPermissionItem(
+                  icon: Icons.compare_arrows,
+                  text: 'Compare with correct pronunciation',
+                ),
+                _buildPermissionItem(
+                  icon: Icons.feedback,
+                  text: 'Provide accurate feedback',
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'You can change this permission anytime in your device settings.',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Not Now'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple[700],
+                ),
+                child: const Text('Allow Access'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldShowRationale == true) {
+          final permissionStatus = await Permission.microphone.request();
+          if (!permissionStatus.isGranted) {
+            if (mounted) {
+              // Show settings dialog if permission is denied
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => AlertDialog(
+                  title: Row(
+                    children: [
+                      Icon(Icons.settings, color: Colors.purple[700]),
+                      const SizedBox(width: 10),
+                      const Text('Enable Microphone'),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'To enable microphone access:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSettingsInstructionItem(
+                        number: '1',
+                        text: 'Open device Settings',
+                      ),
+                      _buildSettingsInstructionItem(
+                        number: '2',
+                        text: 'Go to Apps / Application Manager',
+                      ),
+                      _buildSettingsInstructionItem(
+                        number: '3',
+                        text: 'Find "Skill Boost" app',
+                      ),
+                      _buildSettingsInstructionItem(
+                        number: '4',
+                        text: 'Tap Permissions',
+                      ),
+                      _buildSettingsInstructionItem(
+                        number: '5',
+                        text: 'Enable Microphone',
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => openAppSettings(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple[700],
+                      ),
+                      child: const Text('Open Settings'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error requesting permissions: $e');
+    }
+  }
+
+  Widget _buildPermissionItem({required IconData icon, required String text}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.purple[700]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsInstructionItem(
+      {required String number, required String text}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.purple[700],
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<String> _getRecordingPath() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return '${appDir.path}/recording_${widget.lessonId}_${widget.currentIndex}_$timestamp.m4a';
+  }
+
+  Future<void> _toggleRecording() async {
+    try {
+      if (_isRecording) {
+        // Stop recording
+        final recordingPath = await _audioRecorder.stop();
+
+        if (recordingPath == null || recordingPath.isEmpty) {
+          print('Warning: No recording path received');
+          setState(() {
+            _recordingStatus = 'Recording failed. Please try again.';
+            _isRecording = false;
+          });
+          return;
+        }
+
+        final audioFile = File(recordingPath);
+        if (!audioFile.existsSync()) {
+          print('Warning: Audio file not found at path: $recordingPath');
+          setState(() {
+            _recordingStatus = 'Recording failed. Please try again.';
+            _isRecording = false;
+          });
+          return;
+        }
+
+        // Get the current question ID
+        final questionId = widget.pronunciationItem.id;
+        if (questionId == null || questionId.isEmpty) {
+          print(
+              'Warning: Invalid questionId for current index: $_currentIndex');
+          setState(() {
+            _recordingStatus = 'Recording failed. Please try again.';
+            _isRecording = false;
+          });
+          return;
+        }
+
+        // Store recording data
+        try {
+          _recordings[_currentIndex] = RecordingData(
+            questionId: questionId,
+            recordingPath: recordingPath,
+            timestamp: DateTime.now(),
+            audioFile: audioFile,
+          );
+
+          print('Debug: Stored recording for index $_currentIndex:');
+          print(_recordings[_currentIndex].toString());
+
+          setState(() {
+            _isRecording = false;
+            _showWord = true;
+            _hasRecorded = true;
+            _recordingStatus = 'Recording saved successfully!';
+          });
+
+          // Auto-hide word after 3 seconds
+          _wordTimer?.cancel();
+          _wordTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted) {
+              setState(() {
+                _showWord = false;
+              });
+            }
+          });
+        } catch (e) {
+          print('Error storing recording data: $e');
+          setState(() {
+            _recordingStatus = 'Failed to save recording. Please try again.';
+            _isRecording = false;
+          });
+          return;
+        }
+      } else {
+        // Check and request permission before starting recording
+        final status = await Permission.microphone.status;
+        if (status.isDenied || status.isPermanentlyDenied) {
+          await _requestPermissions();
+          // Check permission status again after request
+          final newStatus = await Permission.microphone.status;
+          if (!newStatus.isGranted) {
+            print('Warning: Microphone permission denied');
+            setState(() {
+              _recordingStatus = 'Microphone permission denied';
+            });
+            return;
+          }
+        }
+
+        // Create recording path
+        final recordingPath = await _getRecordingPath();
+
+        // Start recording
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.wav,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ),
+          path: recordingPath,
+        );
+
+        setState(() {
+          _isRecording = true;
+          _showWord = true;
+          _recordingStatus = 'Recording in progress...';
+        });
+      }
+    } catch (e) {
+      print('Error in _toggleRecording: $e');
+      setState(() {
+        _isRecording = false;
+        _showWord = false;
+        _recordingStatus = 'Recording failed. Please try again.';
+      });
     }
   }
 
@@ -453,11 +786,11 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (_showWord) ...[
-            const Text(
-              'The word was:',
+          if (_showWord || _isRecording) ...[
+            Text(
+              _isRecording ? 'Recording in progress...' : 'The word was:',
               style: TextStyle(
-                color: Colors.grey,
+                color: _isRecording ? Colors.red : Colors.grey,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -470,18 +803,22 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.purple[50]!,
-                    Colors.purple[100]!.withOpacity(0.3),
+                    _isRecording ? Colors.red[50]! : Colors.purple[50]!,
+                    _isRecording
+                        ? Colors.red[100]!.withOpacity(0.3)
+                        : Colors.purple[100]!.withOpacity(0.3),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Colors.purple[200]!,
+                  color: _isRecording ? Colors.red[200]! : Colors.purple[200]!,
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.purple[100]!.withOpacity(0.3),
+                    color: _isRecording
+                        ? Colors.red[100]!.withOpacity(0.3)
+                        : Colors.purple[100]!.withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -492,7 +829,7 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
-                  color: Colors.purple[900],
+                  color: _isRecording ? Colors.red[900] : Colors.purple[900],
                   letterSpacing: 1.2,
                 ),
               ),
@@ -530,11 +867,15 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
               duration: const Duration(milliseconds: 300),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
-                color: (_hasRecorded ? Colors.green[50] : Colors.blue[50])!,
+                color: _isRecording
+                    ? Colors.red[50]
+                    : (_hasRecorded ? Colors.green[50] : Colors.blue[50])!,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: (_hasRecorded ? Colors.green : Colors.blue)[100]!
+                    color: (_isRecording
+                            ? Colors.red
+                            : (_hasRecorded ? Colors.green : Colors.blue))[100]!
                         .withOpacity(0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
@@ -545,16 +886,25 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    _hasRecorded ? Icons.check_circle : Icons.info_outline,
-                    color: _hasRecorded ? Colors.green[700] : Colors.blue[700],
+                    _isRecording
+                        ? Icons.mic
+                        : (_hasRecorded
+                            ? Icons.check_circle
+                            : Icons.info_outline),
+                    color: _isRecording
+                        ? Colors.red[700]
+                        : (_hasRecorded ? Colors.green[700] : Colors.blue[700]),
                     size: 24,
                   ),
                   const SizedBox(width: 12),
                   Text(
                     _recordingStatus,
                     style: TextStyle(
-                      color:
-                          _hasRecorded ? Colors.green[700] : Colors.blue[700],
+                      color: _isRecording
+                          ? Colors.red[700]
+                          : (_hasRecorded
+                              ? Colors.green[700]
+                              : Colors.blue[700]),
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
@@ -563,7 +913,7 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
               ),
             ),
           const Spacer(),
-          if (_hasRecorded)
+          if (_hasRecorded && !_isRecording)
             Container(
               width: double.infinity,
               margin: const EdgeInsets.only(top: 20),
@@ -712,76 +1062,6 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
     );
   }
 
-  void _toggleRecording() {
-    setState(() {
-      if (_isRecording) {
-        _isRecording = false;
-        _hasRecorded = true;
-        _recordingStatus = 'Recording saved! ✓';
-        _showWord = true;
-
-        // Store recording data with current question index
-        _recordings[widget.currentIndex] = RecordingData(
-          questionId: widget.pronunciationItem.id ?? 'unknown',
-          recordingPath:
-              'recording_${widget.lessonId}_${widget.currentIndex}.mp3',
-          timestamp: DateTime.now(),
-        );
-
-        // Print debug info for verification
-        print(
-            'Recording saved for question ${widget.currentIndex + 1}/${widget.totalItems}');
-        print('Current recordings count: ${_recordings.length}');
-
-        // Auto-navigate after showing the word
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted && _hasRecorded) {
-            setState(() {
-              _showWord = false;
-            });
-          }
-        });
-      } else {
-        _isRecording = true;
-        _recordingStatus = 'Recording... speak now';
-
-        // Simulate recording for 3 seconds
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted && _isRecording) {
-            _toggleRecording();
-          }
-        });
-      }
-    });
-  }
-
-  void _logLessonCompletion() {
-    // Sort recordings by index to ensure proper order
-    final sortedRecordings = List.generate(widget.totalItems, (index) {
-      return _recordings[index]?.toJson() ??
-          {
-            'questionId': 'unknown',
-            'recordingPath': 'missing_recording_$index',
-            'timestamp': DateTime.now().toIso8601String()
-          };
-    });
-
-    // Create completion data
-    final completionData = {
-      'userId': _userId ?? 'unknown',
-      'lessonId': widget.lessonId,
-      'lessonName': widget.lessonName,
-      'completedAt': DateTime.now().toIso8601String(),
-      'totalQuestions': widget.totalItems,
-      'completedQuestions': _recordings.length,
-      'recordings': sortedRecordings
-    };
-
-    // Log only the data that would be sent to backend
-    const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    print(encoder.convert(completionData));
-  }
-
   void _showCompletionDialog() {
     showDialog(
       context: context,
@@ -849,15 +1129,192 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Log completion data before navigating
-                      _logLessonCompletion();
+                    onPressed: () async {
+                      // Show loading indicator
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
 
-                      // Pop with recordings data
-                      Navigator.of(context)
-                        ..pop() // Close dialog
-                        ..pop(
-                            _recordings); // Return to lesson list with recordings
+                      try {
+                        // Ensure we have recordings for all questions
+                        if (_recordings.isEmpty) {
+                          throw Exception('No recordings available');
+                        }
+
+                        // Convert recordings to the format expected by the API
+                        final List<File> audioFiles = [];
+                        final List<String> wordIds = [];
+                        final List<String> words = [];
+
+                        // Sort recordings by index to ensure proper order
+                        final sortedIndices = _recordings.keys.toList()..sort();
+
+                        // Debug print each recording before processing
+                        print('Debug: Recordings before processing:');
+                        _recordings.forEach((key, value) {
+                          print('Index: $key');
+                          print('QuestionId: ${value.questionId}');
+                          print('RecordingPath: ${value.recordingPath}');
+                          print('Timestamp: ${value.timestamp}');
+                          print(
+                              'Audio File exists: ${value.audioFile?.existsSync()}');
+                        });
+
+                        for (var index in sortedIndices) {
+                          final recording = _recordings[index]!;
+
+                          // Validate each field
+                          if (recording.questionId.isEmpty) {
+                            throw Exception(
+                                'Invalid questionId for recording at index $index');
+                          }
+                          if (recording.recordingPath.isEmpty) {
+                            throw Exception(
+                                'Invalid recordingPath for recording at index $index');
+                          }
+                          if (recording.timestamp == null) {
+                            throw Exception(
+                                'Invalid timestamp for recording at index $index');
+                          }
+                          if (recording.audioFile == null ||
+                              !recording.audioFile!.existsSync()) {
+                            throw Exception(
+                                'Audio file not found for recording at index $index');
+                          }
+
+                          // Add to lists for submission
+                          audioFiles.add(recording.audioFile!);
+                          wordIds.add(recording.questionId);
+                          words.add(widget.pronunciationItem.word);
+                        }
+
+                        // Get current user ID first
+                        final userId =
+                            await ProfileService().getCurrentUserId();
+                        if (userId == null || userId.isEmpty) {
+                          throw Exception('User ID not found');
+                        }
+
+                        // Validate all required fields
+                        if (widget.lessonId.isEmpty) {
+                          throw Exception('Invalid lesson ID');
+                        }
+                        if (widget.lessonName.isEmpty) {
+                          throw Exception('Invalid lesson name');
+                        }
+                        if (widget.totalItems <= 0) {
+                          throw Exception('Invalid total questions count');
+                        }
+                        if (audioFiles.isEmpty) {
+                          throw Exception('No valid recordings to submit');
+                        }
+
+                        // Debug print final submission data
+                        print('Debug: Final submission data:');
+                        print('UserId: $userId');
+                        print('LessonId: ${widget.lessonId}');
+                        print('LessonName: ${widget.lessonName}');
+                        print('TotalQuestions: ${widget.totalItems}');
+                        print('CompletedQuestions: ${audioFiles.length}');
+
+                        // Get the provider
+                        final provider =
+                            Provider.of<PronunciationFeedbackProvider>(
+                          context,
+                          listen: false,
+                        );
+
+                        // Submit recordings with validated data
+                        final success =
+                            await provider.submitPronunciationRecordings(
+                          lessonId: widget.lessonId,
+                          audioFiles: audioFiles,
+                          wordIds: wordIds,
+                          words: words,
+                        );
+
+                        // Close loading dialog
+                        Navigator.of(context).pop();
+
+                        if (success &&
+                            provider.submissionId != null &&
+                            provider.submissionId!.isNotEmpty) {
+                          print(
+                              'Submission successful. SubmissionId: ${provider.submissionId}');
+
+                          // Clean up audio files
+                          for (var recording in _recordings.values) {
+                            try {
+                              if (recording.audioFile != null &&
+                                  recording.audioFile!.existsSync()) {
+                                await recording.audioFile!.delete();
+                              }
+                            } catch (e) {
+                              print('Error deleting audio file: $e');
+                            }
+                          }
+
+                          // Close completion dialog
+                          Navigator.of(context).pop();
+                          // Close lesson page
+                          Navigator.of(context).pop();
+
+                          // Navigate to feedback screen
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => PronunciationFeedbackScreen(
+                                submissionId: provider.submissionId!,
+                                lessonName: widget.lessonName,
+                              ),
+                            ),
+                          );
+                        } else {
+                          throw Exception(provider.error.isNotEmpty
+                              ? provider.error
+                              : 'Failed to submit recordings: No submission ID received');
+                        }
+                      } catch (e) {
+                        print('Error submitting recordings: $e');
+                        // Close loading dialog if it's showing
+                        Navigator.of(context).pop();
+
+                        // Show error dialog with more details
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Error'),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(e.toString()),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Debug Info:',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text('User ID: $_userId'),
+                                  Text('Lesson ID: ${widget.lessonId}'),
+                                  Text(
+                                      'Recordings Count: ${_recordings.length}'),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple[700],
@@ -870,14 +1327,18 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Return to Lessons',
+                          'View Feedback',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                         SizedBox(width: 8),
-                        Icon(Icons.arrow_forward),
+                        Icon(
+                          Icons.arrow_forward,
+                          color: Colors.white,
+                        ),
                       ],
                     ),
                   ),
@@ -1069,6 +1530,8 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
 
   @override
   void dispose() {
+    _wordTimer?.cancel();
+    _audioRecorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
