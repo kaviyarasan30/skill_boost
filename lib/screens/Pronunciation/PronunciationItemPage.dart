@@ -18,12 +18,14 @@ class RecordingData {
   final String recordingPath;
   final DateTime timestamp;
   final File? audioFile;
+  final String word;
 
   RecordingData({
     required this.questionId,
     required this.recordingPath,
     required this.timestamp,
     this.audioFile,
+    required this.word,
   }) {
     // Validate data at construction time
     if (questionId.trim().isEmpty) {
@@ -32,6 +34,9 @@ class RecordingData {
     if (recordingPath.trim().isEmpty) {
       throw ArgumentError('recordingPath cannot be empty');
     }
+    if (word.trim().isEmpty) {
+      throw ArgumentError('word cannot be empty');
+    }
   }
 
   Map<String, dynamic> toJson() => {
@@ -39,11 +44,12 @@ class RecordingData {
         'recordingPath': recordingPath.trim(),
         'timestamp': timestamp.toIso8601String(),
         'audioFile': audioFile,
+        'word': word.trim(),
       };
 
   @override
   String toString() {
-    return 'RecordingData(questionId: $questionId, recordingPath: $recordingPath, timestamp: $timestamp, audioFile: ${audioFile?.path})';
+    return 'RecordingData(questionId: $questionId, recordingPath: $recordingPath, timestamp: $timestamp, audioFile: ${audioFile?.path}, word: $word)';
   }
 }
 
@@ -431,6 +437,7 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
             recordingPath: recordingPath,
             timestamp: DateTime.now(),
             audioFile: audioFile,
+            word: widget.pronunciationItem.word,
           );
 
           print('Debug: Stored recording for index $_currentIndex:');
@@ -1189,7 +1196,7 @@ class _PronunciationItemPageState extends State<PronunciationItemPage>
                           // Add to lists for submission
                           audioFiles.add(recording.audioFile!);
                           wordIds.add(recording.questionId);
-                          words.add(widget.pronunciationItem.word);
+                          words.add(recording.word);
                         }
 
                         // Get current user ID first
